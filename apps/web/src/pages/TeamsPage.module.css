@@ -1,0 +1,68 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  border-radius: var(--r-md);
+  transition: background-color var(--d-fast) var(--ease);
+}
+.row:hover { background: var(--surface-1); }
+
+.mono {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  transition: background-color var(--d-fast) var(--ease);
+}
+.row:hover .mono { background: var(--surface-3); }
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.meta {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.chev {
+  color: var(--text-faint);
+  transition: transform var(--d-fast) var(--ease), color var(--d-fast) var(--ease);
+}
+.row:hover .chev {
+  color: var(--text-secondary);
+  transform: translateX(2px);
+}
+
+.skeleton {
+  height: 72px;
+  border-radius: var(--r-md);
+  background: var(--surface-1);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}

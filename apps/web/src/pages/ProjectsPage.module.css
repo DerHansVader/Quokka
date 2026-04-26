@@ -1,0 +1,98 @@
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.createForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding: 16px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+  animation: slideDown 260ms var(--ease) both;
+}
+.createField { flex: 1; max-width: 320px; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+  transition: background-color var(--d-med) var(--ease);
+}
+.card:hover { background: var(--surface-2); }
+
+.badge {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  transition: background-color var(--d-med) var(--ease), color var(--d-med) var(--ease);
+}
+.card:hover .badge {
+  background: var(--accent);
+  color: #fff;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+}
+.runs {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.chev {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  color: var(--text-faint);
+  transition: transform var(--d-fast) var(--ease), color var(--d-fast) var(--ease);
+}
+.card:hover .chev {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+.headRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.skeleton {
+  height: 160px;
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}

@@ -1,0 +1,64 @@
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 4px 0;
+  width: 100%;
+  text-align: left;
+  color: var(--text-secondary);
+  transition: color var(--d-fast) var(--ease);
+}
+.groupHead:hover { color: var(--text-primary); }
+
+.chev {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  transition: transform var(--d-med) var(--ease-spring),
+    background-color var(--d-fast) var(--ease),
+    color var(--d-fast) var(--ease);
+}
+.chevOpen { transform: rotate(90deg); }
+.groupHead:hover .chev {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.groupName {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.groupCount {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+.empty {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}

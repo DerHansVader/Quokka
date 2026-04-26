@@ -1,0 +1,12 @@
+{
+  "name": "@quokka/shared",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Shared TypeScript types for Quokka.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

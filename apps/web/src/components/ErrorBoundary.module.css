@@ -1,0 +1,26 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.card {
+  max-width: 420px;
+  text-align: center;
+  padding: 40px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+}
+.title { font-size: 20px; font-weight: 600; color: var(--danger); margin-bottom: 8px; }
+.msg { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; }
+.btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  transition: background-color var(--d-fast) var(--ease);
+}
+.btn:hover { background: var(--surface-3); }

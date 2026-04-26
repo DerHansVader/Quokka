@@ -1,0 +1,42 @@
+{
+  "name": "@quokka/api",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Quokka API server (NestJS + Prisma + TimescaleDB).",
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:dev": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/passport": "^11.0.0",
+    "@prisma/client": "^6.0.0",
+    "bcrypt": "^5.1.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "multer": "^1.4.5-lts.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "@quokka/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.0.0",
+    "@types/passport-jwt": "^4.0.1",
+    "prisma": "^6.0.0",
+    "typescript": "^5.7.0"
+  }
+}

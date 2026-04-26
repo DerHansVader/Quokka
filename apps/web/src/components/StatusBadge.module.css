@@ -1,0 +1,31 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.running  { background: var(--success-bg); color: var(--success); }
+.running .dot { background: var(--success); animation: pulse 2s ease-in-out infinite; }
+
+.finished { background: var(--surface-1); color: var(--text-secondary); }
+.finished .dot { background: var(--text-muted); }
+
+.crashed  { background: var(--danger-bg); color: var(--danger); }
+.crashed .dot { background: var(--danger); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}

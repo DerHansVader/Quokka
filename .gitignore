@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# runtime data
+storage/
+backups/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# tooling caches
+.turbo/
+.vite/
+.cache/
+coverage/
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

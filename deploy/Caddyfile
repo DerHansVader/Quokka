@@ -1,0 +1,10 @@
+{$DOMAIN} {
+  encode gzip
+
+  @api path /api/*
+  reverse_proxy @api api:4000 {
+    flush_interval -1
+  }
+
+  reverse_proxy web:80
+}

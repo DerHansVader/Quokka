@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "54329:5432"
+    environment:
+      POSTGRES_USER: quokka
+      POSTGRES_PASSWORD: quokka
+      POSTGRES_DB: quokka
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

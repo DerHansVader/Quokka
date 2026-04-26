@@ -1,0 +1,30 @@
+{
+  "name": "quokka",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Self-hosted experiment tracker for AI training runs.",
+  "scripts": {
+    "dev:api": "pnpm --filter @quokka/api dev",
+    "dev:web": "pnpm --filter @quokka/web dev",
+    "dev": "pnpm run --parallel dev:api dev:web",
+    "build": "pnpm run --parallel build:api build:web",
+    "build:api": "pnpm --filter @quokka/api build",
+    "build:web": "pnpm --filter @quokka/web build",
+    "db:migrate": "pnpm --filter @quokka/api db:migrate",
+    "db:generate": "pnpm --filter @quokka/api db:generate"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "bcrypt",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

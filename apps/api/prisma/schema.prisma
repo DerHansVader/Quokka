@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  email        String       @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime     @default(now())
+  memberships  TeamMember[]
+  apiKeys      ApiKey[]
+  runs         Run[]
+}
+
+model Team {
+  id       String       @id @default(uuid()) @db.Uuid
+  slug     String       @unique
+  name     String
+  members  TeamMember[]
+  projects Project[]
+}
+
+model TeamMember {
+  id     String @id @default(uuid()) @db.Uuid
+  teamId String @db.Uuid
+  userId String @db.Uuid
+  role   String @default("member") // owner | admin | member
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Project {
+  id     String @id @default(uuid()) @db.Uuid
+  teamId String @db.Uuid
+  slug   String
+  name   String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  runs   Run[]
+  views  View[]
+
+  @@unique([teamId, slug])
+}
+
+model ApiKey {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  label     String
+  prefix    String   // first 8 chars for identification
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Run {
+  id              String    @id @default(uuid()) @db.Uuid
+  projectId       String    @db.Uuid
+  createdByUserId String    @db.Uuid
+  name            String    // auto-generated adjective-noun
+  displayName     String?
+  status          String    @default("running") // running | finished | crashed
+  config          Json      @default("{}")
+  summary         Json      @default("{}")
+  startedAt       DateTime  @default(now())
+  heartbeatAt     DateTime  @default(now())
+  finishedAt      DateTime?
+  notes           String?
+  archived        Boolean   @default(false)
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy       User      @relation(fields: [createdByUserId], references: [id])
+  samples         Sample[]
+
+  @@index([projectId, startedAt])
+}
+
+model Sample {
+  id        String   @id @default(uuid()) @db.Uuid
+  runId     String   @db.Uuid
+  step      BigInt
+  key       String
+  imagePath String?
+  gt        String?
+  pred      String?
+  meta      Json     @default("{}")
+  createdAt DateTime @default(now())
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, key, step])
+}
+
+model View {
+  id        String   @id @default(uuid()) @db.Uuid
+  scope     String   // project | run
+  scopeId   String   @db.Uuid
+  title     String
+  layout    Json     @default("[]")
+  projectId String?  @db.Uuid
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([scope, scopeId])
+}
+
+model Invite {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @db.Uuid
+  email     String
+  role      String   @default("member")
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}

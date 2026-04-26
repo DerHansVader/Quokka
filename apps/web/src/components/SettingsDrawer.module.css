@@ -1,0 +1,13 @@
+.drawer {
+  position: fixed;
+  top: var(--header-h);
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  width: 320px;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform var(--d-slow) var(--ease);
+}
+.open { transform: translateX(0); }
