@@ -85,7 +85,7 @@ export function DocsPage() {
       <header className={s.topbar}>
         <Link to="/" className={s.brand}>
           <span className={s.logo}>
-            <QuokkaMark size={14} />
+            <QuokkaMark size={26} />
           </span>
           <span className={s.wordmark}>quokka</span>
           <span className={s.topbarTag}>docs</span>
@@ -115,6 +115,14 @@ export function DocsPage() {
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
+            </a>
+            <a
+              href="https://www.google.com/search?tbm=isch&q=quokka"
+              className={s.heroLink}
+              target="_blank"
+              rel="noreferrer"
+            >
+              What does the name "Quokka" mean?
             </a>
           </div>
         </div>

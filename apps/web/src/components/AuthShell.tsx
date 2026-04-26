@@ -14,7 +14,7 @@ export function AuthShell({ title, subtitle, error, children }: Props) {
       <div className={s.card}>
         <div className={s.head}>
           <div className={s.logo}>
-            <QuokkaMark size={26} />
+            <QuokkaMark size={56} />
           </div>
           <h1 className={s.title}>{title}</h1>
           {subtitle && <p className={s.subtitle}>{subtitle}</p>}

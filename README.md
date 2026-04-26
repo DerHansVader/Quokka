@@ -4,6 +4,8 @@ A self-hosted experiment tracker for AI training runs. The essence of wandb, not
 
 One process, one team, your data on your disk. Live charts, generation samples, and a tiny Python SDK that drops into existing training scripts as a one-line import swap.
 
+[What does the name "Quokka" mean?](https://www.google.com/search?tbm=isch&q=quokka)
+
 ---
 
 ## Features

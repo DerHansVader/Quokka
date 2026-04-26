@@ -33,9 +33,11 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
+  overflow: hidden;
   background: var(--accent);
-  color: #fff;
 }
+
+.logo img { display: block; border-radius: inherit; }
 
 .wordmark {
   font-family: var(--font-display);

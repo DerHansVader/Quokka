@@ -49,6 +49,15 @@ export function LoginPage() {
         No account? <Link to="/signup" className={a.footerLink}>Create one</Link>
         {' · '}
         <Link to="/docs" className={a.footerLink}>Docs</Link>
+        {' · '}
+        <a
+          href="https://www.google.com/search?tbm=isch&q=quokka"
+          className={a.footerLink}
+          target="_blank"
+          rel="noreferrer"
+        >
+          What does the name "Quokka" mean?
+        </a>
       </p>
     </AuthShell>
   );

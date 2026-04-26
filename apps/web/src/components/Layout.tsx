@@ -22,7 +22,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <header className={s.header}>
           <Link to="/" className={s.brand}>
             <span className={s.logo}>
-              <QuokkaMark size={14} />
+              <QuokkaMark size={26} />
             </span>
             <span className={s.wordmark}>quokka</span>
           </Link>
