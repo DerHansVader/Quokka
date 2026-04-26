@@ -16,7 +16,8 @@ export class CombinedAuthGuard implements CanActivate {
     const req = ctx.switchToHttp().getRequest();
     const auth = req.headers.authorization || '';
 
-    if (auth.startsWith('Bearer qk_')) {
+    // Accept legacy wt_ keys so existing installations survive the Quokka rename.
+    if (auth.startsWith('Bearer qk_') || auth.startsWith('Bearer wt_')) {
       const token = auth.slice(7);
       req.user = await this.authService.validateApiKey(token);
       return true;

@@ -13,7 +13,8 @@ export class ApiKeyGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
     const auth = req.headers.authorization;
-    if (!auth?.startsWith('Bearer qk_')) return false;
+    // Accept legacy wt_ keys so existing installations survive the Quokka rename.
+    if (!auth?.startsWith('Bearer qk_') && !auth?.startsWith('Bearer wt_')) return false;
     const token = auth.slice(7);
     try {
       req.user = await this.authService.validateApiKey(token);
