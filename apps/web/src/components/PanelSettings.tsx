@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { PanelConfig, SmoothingType, ScaleType } from '@quokka/shared';
 import { X_AXIS_LABELS, isBuiltinXAxis } from '../lib/xaxis';
 import { isWindowType } from '../lib/smoothing';
@@ -200,22 +201,30 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 function RangeInputs({
   value, onChange,
 }: { value?: [number, number]; onChange: (v: [number, number] | undefined) => void }) {
-  const [lo, hi] = value || [undefined, undefined];
-  const parse = (x: string): number | undefined => {
-    const n = parseFloat(x);
-    return Number.isFinite(n) ? n : undefined;
+  // Track raw text locally so partial input (e.g. only "min" filled in)
+  // doesn't get wiped by the parent clearing the value.
+  const [lo, setLo] = useState(value ? String(value[0]) : '');
+  const [hi, setHi] = useState(value ? String(value[1]) : '');
+
+  useEffect(() => {
+    setLo(value ? String(value[0]) : '');
+    setHi(value ? String(value[1]) : '');
+  }, [value]);
+
+  const commit = (loStr: string, hiStr: string) => {
+    const a = parseFloat(loStr);
+    const b = parseFloat(hiStr);
+    if (Number.isFinite(a) && Number.isFinite(b)) onChange([a, b]);
+    else if (loStr === '' && hiStr === '') onChange(undefined);
   };
-  const set = (next: [number | undefined, number | undefined]) => {
-    if (next[0] !== undefined && next[1] !== undefined) onChange([next[0], next[1]]);
-    else onChange(undefined);
-  };
+
   return (
     <div className={s.pair}>
-      <input type="number" placeholder="min" value={lo ?? ''}
-        onChange={(e) => set([parse(e.target.value), hi])}
+      <input type="number" placeholder="min" value={lo}
+        onChange={(e) => { setLo(e.target.value); commit(e.target.value, hi); }}
         className={s.rangeInput} />
-      <input type="number" placeholder="max" value={hi ?? ''}
-        onChange={(e) => set([lo, parse(e.target.value)])}
+      <input type="number" placeholder="max" value={hi}
+        onChange={(e) => { setHi(e.target.value); commit(lo, e.target.value); }}
         className={s.rangeInput} />
     </div>
   );

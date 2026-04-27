@@ -10,7 +10,6 @@ import { PanelGrid } from '../components/PanelGrid';
 import { SampleViewer } from '../components/SampleViewer';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Page } from '../components/Page';
 import { SettingsDrawer } from '../components/SettingsDrawer';
 import type { RunSeriesEntry } from '../components/Panel';
 import { resolveXY, isBuiltinXAxis } from '../lib/xaxis';
@@ -75,9 +74,9 @@ export function RunViewerPage() {
   });
 
   if (!run) return (
-    <Page>
+    <div className={s.root}>
       <div className={s.loading}><div className={s.spinner} /></div>
-    </Page>
+    </div>
   );
 
   const teamSlug = run.project.team.slug;
@@ -109,7 +108,7 @@ export function RunViewerPage() {
   const startHour = startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <Page>
+    <>
       <div
         className={[s.root, editingIndex !== null && tab === 'charts' ? s.rootShifted : ''].join(' ')}
       >
@@ -189,6 +188,6 @@ export function RunViewerPage() {
         onClose={() => setEditingIndex(null)}
         availableKeys={keys || []}
       />
-    </Page>
+    </>
   );
 }

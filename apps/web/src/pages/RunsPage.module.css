@@ -50,10 +50,10 @@
 .main {
   flex: 1;
   overflow-y: auto;
-  padding: 32px 40px 64px;
+  padding: 24px 24px 48px;
   transition: padding-right var(--d-slow) var(--ease);
 }
-.mainShifted { padding-right: calc(320px + 40px); }
+.mainShifted { padding-right: calc(320px + 24px); }
 
 .emptyState {
   display: flex;
