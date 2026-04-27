@@ -35,6 +35,28 @@ export interface PanelConfig {
   yDomain?: [number, number];
   /** `step` | `relativeTime` | `wallTime` | any metric key. Default `step`. */
   xAxis?: string;
+  /** Stable id, used in canvas mode for drag/drop and uniqueness across duplicates. */
+  id?: string;
+  /** Canvas-mode position in grid cells (top-left corner). */
+  x?: number;
+  y?: number;
+  /** Canvas-mode size in grid cells. */
+  w?: number;
+  h?: number;
+}
+
+export type ViewMode = 'grid' | 'canvas';
+
+/** Stored in `View.layout`. Older arrays-of-PanelConfig are auto-migrated. */
+export interface ViewLayout {
+  mode: ViewMode;
+  /** Auto-grid: one panel per metric, settings apply across all runs. */
+  grid: PanelConfig[];
+  /** Canvas: user-curated panels with free position + size. */
+  canvas: {
+    panels: PanelConfig[];
+    viewport: { x: number; y: number; zoom: number };
+  };
 }
 
 export interface MetricPoint {

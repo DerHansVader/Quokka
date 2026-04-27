@@ -75,3 +75,10 @@
 }
 .tab:hover { color: var(--text-secondary); }
 .tabActive { background: var(--surface-3); color: var(--text-primary); }
+
+.viewToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}

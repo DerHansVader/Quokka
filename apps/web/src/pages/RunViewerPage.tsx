@@ -7,10 +7,12 @@ import { useRunStream } from '../hooks/useRunStream';
 import { usePersistedPanels } from '../hooks/usePersistedPanels';
 import { StatusBadge } from '../components/StatusBadge';
 import { PanelGrid } from '../components/PanelGrid';
+import { Canvas } from '../components/Canvas';
 import { SampleViewer } from '../components/SampleViewer';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { SettingsDrawer } from '../components/SettingsDrawer';
+import { ViewModeToggle } from '../components/ViewModeToggle';
 import type { RunSeriesEntry } from '../components/Panel';
 import { resolveXY, isBuiltinXAxis } from '../lib/xaxis';
 import s from './RunViewerPage.module.css';
@@ -48,7 +50,10 @@ export function RunViewerPage() {
     queryFn: () => api.get<string[]>('/runs/' + runId + '/keys'),
   });
 
-  const { panels, updatePanel } = usePersistedPanels('run', runId, keys);
+  const {
+    mode, setMode, panels, updatePanel,
+    addCanvasPanel, removeCanvasPanel, viewport, setViewport,
+  } = usePersistedPanels('run', runId, keys);
 
   const { data: seriesData } = useQuery({
     queryKey: ['series', runId, keys],
@@ -171,13 +176,33 @@ export function RunViewerPage() {
         </div>
 
         {tab === 'charts' && (
-          <PanelGrid
-            panels={panels}
-            runsForPanel={runsForPanel}
-            editingIndex={editingIndex}
-            onOpenSettings={(i) => setEditingIndex(i === editingIndex ? null : i)}
-            groupStateId={'run-' + runId}
-          />
+          <>
+            <div className={s.viewToolbar}>
+              <ViewModeToggle value={mode} onChange={setMode} />
+            </div>
+            {mode === 'canvas' ? (
+              <Canvas
+                panels={panels}
+                runsForPanel={runsForPanel}
+                availableKeys={keys ?? []}
+                viewport={viewport}
+                onViewportChange={setViewport}
+                onPanelChange={updatePanel}
+                onPanelAdd={addCanvasPanel}
+                onPanelRemove={removeCanvasPanel}
+                editingIndex={editingIndex}
+                onOpenSettings={(i) => setEditingIndex(i === editingIndex ? null : i)}
+              />
+            ) : (
+              <PanelGrid
+                panels={panels}
+                runsForPanel={runsForPanel}
+                editingIndex={editingIndex}
+                onOpenSettings={(i) => setEditingIndex(i === editingIndex ? null : i)}
+                groupStateId={'run-' + runId}
+              />
+            )}
+          </>
         )}
         {tab === 'samples' && <SampleViewer runId={runId!} />}
       </div>

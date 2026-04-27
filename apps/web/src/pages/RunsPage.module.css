@@ -55,6 +55,13 @@
 }
 .mainShifted { padding-right: calc(320px + 24px); }
 
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
 .emptyState {
   display: flex;
   flex-direction: column;
