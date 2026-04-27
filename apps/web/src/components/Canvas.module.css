@@ -7,21 +7,26 @@
   background: var(--bg-app);
   overflow: hidden;
 }
+.rootPanning,
+.rootPanning * { cursor: grabbing !important; }
 
 .viewport {
   position: absolute;
   inset: 0;
   user-select: none;
+  cursor: default;
 }
 
 .bg {
   position: absolute;
-  left: 0; top: 0;
+  left: -6000px;
+  top: -6000px;
   width: 12000px;
   height: 12000px;
   background-image:
     radial-gradient(circle at 1px 1px, var(--surface-3) 1px, transparent 0);
   pointer-events: none;
+  opacity: 0.6;
 }
 
 .world {
@@ -37,15 +42,38 @@
   flex-direction: column;
   background: var(--surface-1);
   border-radius: var(--r-lg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   overflow: hidden;
   transition: box-shadow var(--d-fast) var(--ease);
 }
-.panel:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); }
-.panelEditing { box-shadow: inset 0 0 0 1px var(--accent), 0 4px 16px rgba(0, 0, 0, 0.25); }
-.panelDragging { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); z-index: 10; }
+.panel:hover {
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.6),
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.panelEditing {
+  box-shadow:
+    inset 0 0 0 1.5px var(--accent),
+    0 20px 48px rgba(0, 0, 0, 0.6);
+}
+.panelSelected {
+  box-shadow:
+    inset 0 0 0 1.5px var(--accent),
+    0 20px 48px rgba(0, 0, 0, 0.55);
+}
+.panelDragging {
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.7),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
 
 .header {
+  position: relative;
   height: 32px;
   display: flex;
   align-items: center;
@@ -56,6 +84,23 @@
 }
 .header:active { cursor: grabbing; }
 
+/* Visible "drag handle" pill at the top edge of each panel. */
+.handle {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 32px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity var(--d-fast) var(--ease), background-color var(--d-fast) var(--ease);
+  pointer-events: none;
+}
+.panel:hover .handle { opacity: 0.7; }
+.panel:hover .header:hover .handle { opacity: 1; background: var(--text-muted); }
+
 .title {
   font-size: 12px;
   font-weight: 600;
@@ -63,9 +108,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-top: 4px;  /* leave room for the handle pill */
 }
 
-.actions { display: flex; gap: 2px; }
+.actions { display: flex; gap: 2px; margin-top: 4px; }
 
 .iconBtn {
   width: 24px;
@@ -76,6 +122,7 @@
   border-radius: var(--r-xs);
   color: var(--text-muted);
   opacity: 0;
+  cursor: pointer;
   transition: opacity var(--d-fast) var(--ease),
     background-color var(--d-fast) var(--ease),
     color var(--d-fast) var(--ease);
@@ -88,6 +135,7 @@
   flex: 1;
   min-height: 0;
   padding: 0 6px 6px;
+  cursor: crosshair;
 }
 
 .noData {
@@ -103,8 +151,8 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   cursor: nwse-resize;
   background: linear-gradient(135deg,
     transparent 0 50%,
@@ -114,9 +162,31 @@
     transparent 80%);
   opacity: 0;
   transition: opacity var(--d-fast) var(--ease);
+  z-index: 2;
 }
-.panel:hover .resize { opacity: 0.6; }
+.panel:hover .resize { opacity: 0.55; }
 .resize:hover { opacity: 1; }
+
+/* ── snap-preview ghost ───────────────────────────────────── */
+.ghost {
+  position: absolute;
+  pointer-events: none;
+  border-radius: var(--r-lg);
+  background: var(--accent);
+  opacity: 0.08;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  transition: opacity var(--d-fast) var(--ease);
+}
+
+/* ── marquee selection ───────────────────────────────────── */
+.marquee {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 4px;
+  background: rgba(10, 132, 255, 0.10);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  z-index: 50;
+}
 
 /* ── toolbar ──────────────────────────────────────────────── */
 .toolbar {
@@ -131,7 +201,7 @@
   padding: 8px 12px;
   background: var(--surface-1);
   border-radius: var(--r-lg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .search {
@@ -166,6 +236,7 @@
   background: var(--surface-2);
   border-radius: 999px;
   white-space: nowrap;
+  cursor: pointer;
   transition: background-color var(--d-fast) var(--ease), color var(--d-fast) var(--ease);
 }
 .chip:hover { background: var(--surface-3); color: var(--text-primary); }
@@ -197,7 +268,72 @@
   color: var(--text-secondary);
   background: var(--surface-1);
   border-radius: var(--r-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
   transition: color var(--d-fast) var(--ease), background-color var(--d-fast) var(--ease);
 }
 .zoomBadge:hover { color: var(--text-primary); background: var(--surface-2); }
+
+/* ── context menu ─────────────────────────────────────────── */
+.menu {
+  position: absolute;
+  z-index: 100;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--surface-1);
+  border-radius: var(--r-md);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: transparent;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: background-color var(--d-fast) var(--ease);
+}
+.menuItem:hover:not(:disabled) { background: var(--surface-2); }
+.menuItem:disabled { color: var(--text-muted); cursor: default; }
+
+.menuDanger { color: #ff6b6b; }
+.menuDanger:hover { background: rgba(255, 107, 107, 0.12); }
+
+.menuChev { color: var(--text-muted); font-size: 14px; }
+
+.menuSep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--surface-3);
+}
+
+/* Submenu: nested inside .menuItem; reveals on hover */
+.menuSubmenu { padding-right: 24px; }
+.submenuPanel {
+  position: absolute;
+  top: -4px;
+  left: 100%;
+  margin-left: 2px;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface-1);
+  border-radius: var(--r-md);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  display: none;
+}
+.menuSubmenu:hover .submenuPanel { display: block; }

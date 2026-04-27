@@ -37,32 +37,17 @@ function normalize(raw: any): ViewLayout {
       canvas: { panels: [], viewport: { x: 0, y: 0, zoom: 1 } },
     };
   }
+  const canvasPanels: PanelConfig[] = Array.isArray(raw?.canvas?.panels)
+    ? raw.canvas.panels.map((p: PanelConfig) => (p.id ? p : { ...p, id: newId() }))
+    : [];
   return {
     mode: raw?.mode === 'canvas' ? 'canvas' : 'grid',
     grid: Array.isArray(raw?.grid) ? raw.grid : [],
     canvas: {
-      panels: Array.isArray(raw?.canvas?.panels) ? raw.canvas.panels : [],
+      panels: canvasPanels,
       viewport: raw?.canvas?.viewport ?? { x: 0, y: 0, zoom: 1 },
     },
   };
-}
-
-/** Find the first non-overlapping spot for a new panel, scanning row-by-row. */
-function nextSpot(panels: PanelConfig[], w: number, h: number) {
-  if (!panels.length) return { x: 0, y: 0 };
-  // Greedy: stack to the right of the last panel; wrap to a new row at width 24.
-  const cols = 24;
-  for (let y = 0; y < 200; y++) {
-    for (let x = 0; x + w <= cols; x++) {
-      const overlaps = panels.some((p) => {
-        const px = p.x ?? 0, py = p.y ?? 0;
-        const pw = p.w ?? DEFAULT_W, ph = p.h ?? DEFAULT_H;
-        return x < px + pw && x + w > px && y < py + ph && y + h > py;
-      });
-      if (!overlaps) return { x, y };
-    }
-  }
-  return { x: 0, y: 0 };
 }
 
 export function usePersistedPanels(
@@ -118,10 +103,11 @@ export function usePersistedPanels(
     }
   };
 
-  const addCanvasPanel = (key: string) => {
-    const w = DEFAULT_W, h = DEFAULT_H;
-    const { x, y } = nextSpot(layout.canvas.panels, w, h);
-    const next: PanelConfig = { ...defaultPanel(key), id: newId(), x, y, w, h };
+  const addCanvasPanel = (key: string, at: { x: number; y: number }) => {
+    const next: PanelConfig = {
+      ...defaultPanel(key), id: newId(),
+      x: at.x, y: at.y, w: DEFAULT_W, h: DEFAULT_H,
+    };
     persist({
       ...layout,
       canvas: { ...layout.canvas, panels: [...layout.canvas.panels, next] },

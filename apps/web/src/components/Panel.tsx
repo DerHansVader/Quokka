@@ -19,7 +19,10 @@ export interface RunSeriesEntry {
 interface PanelProps {
   config: PanelConfig;
   runs: RunSeriesEntry[];
+  /** Fixed pixel height. Ignored when `fill` is true. */
   height?: number;
+  /** Take height from the parent container instead of the `height` prop. */
+  fill?: boolean;
 }
 
 const fmt = (v: unknown) =>
@@ -38,7 +41,7 @@ const withAlpha = (hex: string, a: number) => {
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
+export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: PanelProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
@@ -118,11 +121,13 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
       gap: 3,
     };
 
+    const wrap = wrapRef.current;
     const width = Math.max(1, host.clientWidth);
+    const effectiveHeight = fill && wrap ? Math.max(1, wrap.clientHeight) : height;
 
     const opts: uPlot.Options = {
       width,
-      height,
+      height: effectiveHeight,
       legend: { show: false },
       padding: [8, 10, 0, 0],
       cursor: {
@@ -188,9 +193,9 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
       plotRef.current?.destroy();
       plotRef.current = null;
     };
-  }, [runs, config, height]);
+  }, [runs, config, height, fill]);
 
-  // observe size and resize the plot in place
+  // observe size and resize the plot in place (width + height)
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
@@ -199,16 +204,21 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
       const plot = plotRef.current;
       if (!plot) return;
       const w = Math.max(1, wrap.clientWidth);
-      if (w !== plot.width || height !== plot.height) {
-        plot.setSize({ width: w, height });
+      const h = fill ? Math.max(1, wrap.clientHeight) : height;
+      if (w !== plot.width || h !== plot.height) {
+        plot.setSize({ width: w, height: h });
       }
     });
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [height]);
+  }, [height, fill]);
 
   return (
-    <div ref={wrapRef} className={s.wrap} style={{ height }}>
+    <div
+      ref={wrapRef}
+      className={s.wrap}
+      style={fill ? { height: '100%' } : { height }}
+    >
       {runs.length === 0 ? (
         <div className={s.empty}>No visible runs</div>
       ) : (
