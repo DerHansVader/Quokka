@@ -389,27 +389,66 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
   }, [setHoveredRun]);
 
   // Right-click on the chart → show a small context menu offering to open
-  // the sample for the closest run at the cursor's step. Step snaps to that
-  // run's nearest recorded x value.
+  // the sample for the closest run at the cursor's step. We always own the
+  // gesture (preventDefault even if we have nothing useful to offer), and
+  // recompute the target fresh from the cursor — relying on the cached
+  // hover index would silently fall back to the OS menu in the (common)
+  // case that no line brackets the cursor at that x.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
       const u = plotRef.current;
-      const closest = closestRef.current;
-      if (!u || closest < 0) return;
-      const run = runsRef.current[closest];
+      if (!u) return;
+
+      const cy = u.cursor.top ?? -1;
+      const cx = u.cursor.left ?? -1;
+      if (cy < 0 || cx < 0) return;
+
+      const cursorX = u.posToVal(cx, 'x');
+      const xs = u.data[0] as unknown as number[];
+      const drawRaw =
+        config.smoothing.type !== 'none' && config.showRaw !== false;
+      const smoothedStart = 1 + (drawRaw ? runsRef.current.length : 0);
+
+      let bestRun = -1;
+      let bestDist = Infinity;
+      for (let i = 0; i < runsRef.current.length; i++) {
+        const r = runsRef.current[i];
+        if (r.visible === false) continue;
+        const ys = u.data[smoothedStart + i] as unknown as
+          | ArrayLike<number | null | undefined>
+          | undefined;
+        if (!ys) continue;
+        // Prefer interpolated line distance; fall back to nearest point so
+        // right-click still works just outside a sparse run's data range.
+        const yLine = lineYAt(ys, xs, cursorX, u.cursor.idx ?? 0);
+        let d = Infinity;
+        if (yLine != null && Number.isFinite(yLine)) {
+          d = Math.abs(u.valToPos(yLine, 'y') - cy);
+        } else {
+          for (const p of r.points) {
+            const px = u.valToPos(p.x, 'x');
+            const py = u.valToPos(p.y, 'y');
+            const dd = Math.hypot(px - cx, py - cy);
+            if (dd < d) d = dd;
+          }
+        }
+        if (d < bestDist) { bestDist = d; bestRun = i; }
+      }
+      if (bestRun < 0) return;
+
+      const run = runsRef.current[bestRun];
       if (!run || run.points.length === 0) return;
 
-      const cursorX = u.posToVal(u.cursor.left ?? 0, 'x');
       let step = run.points[0].x;
-      let bestD = Infinity;
+      let bestStepD = Infinity;
       for (const p of run.points) {
-        const d = Math.abs(p.x - cursorX);
-        if (d < bestD) { bestD = d; step = p.x; }
+        const dd = Math.abs(p.x - cursorX);
+        if (dd < bestStepD) { bestStepD = dd; step = p.x; }
       }
 
-      e.preventDefault();
       setMenu({
         x: e.clientX,
         y: e.clientY,
@@ -421,7 +460,7 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
     };
     host.addEventListener('contextmenu', onContextMenu);
     return () => host.removeEventListener('contextmenu', onContextMenu);
-  }, []);
+  }, [config.smoothing.type, config.showRaw]);
 
   // Dismiss the context menu on any outside click or Escape.
   useEffect(() => {

@@ -14,10 +14,12 @@
 /* W&B-style drag-to-zoom rectangle. uPlot draws this while the user
  * drags; needs to be clearly visible against busy charts. */
 .host :global(.u-select) {
-  background: rgba(0, 122, 255, 0.32);
-  border: 1.5px solid rgba(0, 122, 255, 0.95);
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset;
+  background: rgba(0, 122, 255, 0.45) !important;
+  border: 2px solid #0a84ff !important;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+    0 0 14px rgba(0, 122, 255, 0.55);
 }
 .tip {
   position: fixed;
