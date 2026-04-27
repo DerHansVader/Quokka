@@ -18,7 +18,7 @@ export class ProjectsController {
 
   @Get()
   list(@Param('teamSlug') teamSlug: string, @CurrentUser() user: any) {
-    return this.projectsService.listForTeam(teamSlug, user.id);
+    return this.projectsService.listForTeam(teamSlug, user);
   }
 
   @Post()
@@ -27,7 +27,7 @@ export class ProjectsController {
     @CurrentUser() user: any,
     @Body() dto: CreateProjectDto,
   ) {
-    return this.projectsService.create(teamSlug, user.id, dto);
+    return this.projectsService.create(teamSlug, user, dto);
   }
 
   @Get(':projectSlug')
@@ -36,6 +36,6 @@ export class ProjectsController {
     @Param('projectSlug') projectSlug: string,
     @CurrentUser() user: any,
   ) {
-    return this.projectsService.getBySlug(teamSlug, projectSlug, user.id);
+    return this.projectsService.getBySlug(teamSlug, projectSlug, user);
   }
 }

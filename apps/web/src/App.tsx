@@ -9,6 +9,7 @@ import { RunsPage } from './pages/RunsPage';
 import { RunViewerPage } from './pages/RunViewerPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TeamAdminPage } from './pages/TeamAdminPage';
+import { AdminPage } from './pages/AdminPage';
 import { DocsPage } from './pages/DocsPage';
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/" element={<Protected><TeamsPage /></Protected>} />
+        <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
         <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
         <Route path="/:teamSlug" element={<Protected><ProjectsPage /></Protected>} />
         <Route path="/:teamSlug/team" element={<Protected><TeamAdminPage /></Protected>} />

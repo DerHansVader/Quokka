@@ -15,7 +15,7 @@ const SECTIONS: SectionDef[] = [
   { id: 'samples',      title: 'Logging samples' },
   { id: 'projects',     title: 'Projects & teams' },
   { id: 'ui',           title: 'The dashboard' },
-  { id: 'team-admin',   title: 'Team & roles' },
+  { id: 'team-admin',   title: 'Roles & invites' },
   { id: 'env',          title: 'Environment' },
 ];
 
@@ -244,7 +244,7 @@ quokka.log({
           <Section id="projects" title="Projects & teams">
             <p>The hierarchy is small and honest:</p>
             <ul className={s.ul}>
-              <li><strong>Team</strong> — a group of users. Owners, admins, members.</li>
+              <li><strong>Team</strong> — a group of users with owners, team admins, and members.</li>
               <li><strong>Project</strong> — a named bucket of runs inside a team.</li>
               <li><strong>Run</strong> — one training execution; has metrics, samples, config, a heartbeat.</li>
             </ul>
@@ -274,20 +274,31 @@ quokka.log({
             </ul>
           </Section>
 
-          <Section id="team-admin" title="Team & roles">
+          <Section id="team-admin" title="Roles & invites">
             <p>
-              Team admins can invite members and manage roles from
-              <strong> Team settings </strong>on the projects page.
+              One Quokka instance is one company. Two layers of control:
             </p>
             <ul className={s.ul}>
-              <li><strong>Owner</strong> — full control; can manage owners.</li>
-              <li><strong>Admin</strong> — invite, remove members, change admin/member roles.</li>
-              <li><strong>Member</strong> — read/write access to projects and runs.</li>
+              <li>
+                <strong>Super admin</strong> — instance-wide. Sees and manages every team and
+                user from the <strong>Admin</strong> page. Doesn't need to be a member of any team.
+                The first signup is auto-promoted; super admins can promote others.
+              </li>
+              <li>
+                <strong>Owner</strong> — full control of one team; can manage owners.
+              </li>
+              <li>
+                <strong>Team admin</strong> — invite and remove members, change non-owner roles.
+              </li>
+              <li>
+                <strong>Member</strong> — read/write access to the team's projects and runs.
+              </li>
             </ul>
             <p>
-              Invites are key-based: create one in the UI, copy the key, and share it
-              wherever. New users paste it during signup; existing users paste it from
-              the Teams page. Keys expire after 7 days and can be revoked.
+              Invites are key-based: a team admin (or super admin, or owner) creates a key in
+              <strong> Team settings</strong>, copies it, and shares it. New users paste it during
+              signup; existing users paste it from the Teams page. Keys expire after 7 days and
+              can be revoked.
             </p>
           </Section>
 

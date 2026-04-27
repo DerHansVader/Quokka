@@ -39,7 +39,14 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
-      data: { email: dto.email, passwordHash, name: dto.name },
+      // First user of an instance becomes the company-wide super admin.
+      // One Quokka instance is one company by design.
+      data: {
+        email: dto.email,
+        passwordHash,
+        name: dto.name,
+        isSuperAdmin: isFirstUser,
+      },
     });
 
     if (isFirstUser) {

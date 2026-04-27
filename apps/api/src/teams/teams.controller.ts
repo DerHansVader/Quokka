@@ -25,22 +25,22 @@ export class TeamsController {
 
   @Get()
   list(@CurrentUser() user: any) {
-    return this.teamsService.listForUser(user.id);
+    return this.teamsService.listForUser(user);
   }
 
   @Post()
   create(@CurrentUser() user: any, @Body() dto: CreateTeamDto) {
-    return this.teamsService.create(user.id, dto);
+    return this.teamsService.create(user, dto);
   }
 
   @Post('join')
   join(@CurrentUser() user: any, @Body() dto: JoinTeamDto) {
-    return this.teamsService.joinByInviteKey(user.id, dto.inviteKey);
+    return this.teamsService.joinByInviteKey(user, dto.inviteKey);
   }
 
   @Get(':slug')
   getBySlug(@Param('slug') slug: string, @CurrentUser() user: any) {
-    return this.teamsService.getBySlug(slug, user.id);
+    return this.teamsService.getBySlug(slug, user);
   }
 
   @Post(':slug/invites')
@@ -50,13 +50,13 @@ export class TeamsController {
     @Body() dto: InviteMemberDto,
   ) {
     const teamId = await this.resolveTeamId(slug);
-    return this.teamsService.inviteMember(teamId, user.id, dto);
+    return this.teamsService.inviteMember(teamId, user, dto);
   }
 
   @Get(':slug/invites')
   async listInvites(@Param('slug') slug: string, @CurrentUser() user: any) {
     const teamId = await this.resolveTeamId(slug);
-    return this.teamsService.listInvites(teamId, user.id);
+    return this.teamsService.listInvites(teamId, user);
   }
 
   @Delete(':slug/invites/:inviteId')
@@ -66,7 +66,7 @@ export class TeamsController {
     @CurrentUser() user: any,
   ) {
     const teamId = await this.resolveTeamId(slug);
-    return this.teamsService.revokeInvite(teamId, user.id, inviteId);
+    return this.teamsService.revokeInvite(teamId, user, inviteId);
   }
 
   @Patch(':slug/members/:userId')
@@ -77,7 +77,7 @@ export class TeamsController {
     @Body() dto: UpdateRoleDto,
   ) {
     const teamId = await this.resolveTeamId(slug);
-    return this.teamsService.updateMemberRole(teamId, user.id, targetUserId, dto.role);
+    return this.teamsService.updateMemberRole(teamId, user, targetUserId, dto.role);
   }
 
   @Delete(':slug/members/:userId')
@@ -87,7 +87,7 @@ export class TeamsController {
     @CurrentUser() user: any,
   ) {
     const teamId = await this.resolveTeamId(slug);
-    return this.teamsService.removeMember(teamId, user.id, targetUserId);
+    return this.teamsService.removeMember(teamId, user, targetUserId);
   }
 
   private async resolveTeamId(slug: string): Promise<string> {

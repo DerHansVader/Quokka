@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../stores/auth';
 import { QuokkaMark } from './QuokkaMark';
+import { api } from '../lib/api';
 import s from './Layout.module.css';
 
 const iconProps = {
@@ -16,6 +18,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const publicPaths = ['/login', '/signup', '/docs'];
   const showHeader = !!token && !publicPaths.includes(location.pathname);
 
+  const { data: me } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<{ id: string; isSuperAdmin?: boolean }>('/auth/me'),
+    enabled: !!token,
+  });
+
   return (
     <div className={s.root}>
       {showHeader && (
@@ -28,6 +36,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           <nav className={s.nav}>
+            {me?.isSuperAdmin && (
+              <Link to="/admin" title="Admin" className={s.navBtn}>
+                <svg {...iconProps}>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </Link>
+            )}
             <Link to="/docs" title="Docs" className={s.navBtn}>
               <svg {...iconProps}>
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

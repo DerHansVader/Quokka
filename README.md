@@ -22,12 +22,14 @@ One process, one team, your data on your disk. Live charts, generation samples, 
 
 ## Architecture
 
+
 | Layer    | Stack                                                         |
 | -------- | ------------------------------------------------------------- |
 | Backend  | NestJS · Prisma · Postgres + TimescaleDB                      |
 | Frontend | React 19 · Vite · TanStack Query · uPlot · custom CSS modules |
 | SDK      | Python 3.10+, single file, background queue, offline spool    |
 | Ops      | Docker Compose, Caddy for TLS, `pg_dump` backups              |
+
 
 ```
 apps/
@@ -52,7 +54,13 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Caddy provisions TLS automatically. The first signup becomes the owner of the default team; everyone else joins by pasting an invite key from the team admin page.
+Caddy provisions TLS automatically.
+
+**One instance is one company.** The first signup becomes the company-wide
+**super admin** and owner of the default team. The super admin can see and
+manage every team and user from the `/admin` page without being a member
+of any team. Everyone else joins by pasting an invite key from a team
+admin (the per-team manager role, formerly called "admin").
 
 Quokka stores metrics in a hand-written TimescaleDB hypertable. Do **not** run `prisma db push` against a Quokka database; it can drop the unmanaged `metric` table. Use `pnpm --filter @quokka/api db:migrate` / `prisma migrate deploy` only.
 

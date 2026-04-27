@@ -1,6 +1,7 @@
 import { IsString, IsOptional, IsEmail, IsIn } from 'class-validator';
 
-export const TEAM_ROLES = ['owner', 'admin', 'member'] as const;
+// Roles within a single team. Instance-wide control sits on User.isSuperAdmin.
+export const TEAM_ROLES = ['owner', 'team_admin', 'member'] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 
 export class CreateTeamDto {

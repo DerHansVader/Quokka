@@ -101,4 +101,55 @@ describe('AuthService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('promotes the very first user to super admin (one company per instance)', async () => {
+    const userCreate = vi.fn().mockResolvedValue({ id: 'user-1' });
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        count: vi.fn().mockResolvedValue(0),
+        create: userCreate,
+      },
+      team: { create: vi.fn().mockResolvedValue({ id: 'team-1' }) },
+      teamMember: { create: vi.fn().mockResolvedValue({}) },
+    };
+
+    await serviceWith(prisma).signup({
+      email: 'first@example.com',
+      name: 'First',
+      password: 'password123',
+    });
+
+    expect(userCreate.mock.calls[0][0].data.isSuperAdmin).toBe(true);
+  });
+
+  it('does not auto-promote subsequent users to super admin', async () => {
+    const userCreate = vi.fn().mockResolvedValue({ id: 'user-2' });
+    const prisma = {
+      user: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        count: vi.fn().mockResolvedValue(1),
+        create: userCreate,
+      },
+      invite: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'invite-1',
+          teamId: 'team-1',
+          role: 'member',
+          expiresAt: new Date(Date.now() + 1000),
+        }),
+        delete: vi.fn().mockResolvedValue({}),
+      },
+      teamMember: { create: vi.fn().mockResolvedValue({}) },
+    };
+
+    await serviceWith(prisma).signup({
+      email: 'second@example.com',
+      name: 'Second',
+      password: 'password123',
+      inviteKey: 'qki_x',
+    });
+
+    expect(userCreate.mock.calls[0][0].data.isSuperAdmin).toBe(false);
+  });
 });

@@ -8,6 +8,7 @@ import { IngestModule } from './ingest/ingest.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { StreamModule } from './stream/stream.module';
 import { ViewsModule } from './views/views.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthController } from './common/health.controller';
 import { RunHealthService } from './common/run-health.service';
 
@@ -22,6 +23,7 @@ import { RunHealthService } from './common/run-health.service';
     MetricsModule,
     StreamModule,
     ViewsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [RunHealthService],

@@ -16,7 +16,12 @@ interface Project {
 }
 
 interface TeamMeta {
-  myRole: 'owner' | 'admin' | 'member';
+  myRole: 'owner' | 'team_admin' | 'member' | null;
+}
+
+interface Me {
+  id: string;
+  isSuperAdmin?: boolean;
 }
 
 export function ProjectsPage() {
@@ -33,7 +38,12 @@ export function ProjectsPage() {
     queryKey: ['team', teamSlug],
     queryFn: () => api.get<TeamMeta>('/teams/' + teamSlug),
   });
-  const canManageTeam = team?.myRole === 'owner' || team?.myRole === 'admin';
+  const { data: me } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<Me>('/auth/me'),
+  });
+  const canManageTeam =
+    !!me?.isSuperAdmin || team?.myRole === 'owner' || team?.myRole === 'team_admin';
 
   const createMut = useMutation({
     mutationFn: () => {

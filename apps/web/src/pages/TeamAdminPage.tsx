@@ -8,9 +8,13 @@ import { Page } from '../components/Page';
 import s from './TeamAdminPage.module.css';
 import p from './shared.module.css';
 
-type Role = 'owner' | 'admin' | 'member';
-const ROLES: Role[] = ['owner', 'admin', 'member'];
-const ROLE_LABEL: Record<Role, string> = { owner: 'Owner', admin: 'Admin', member: 'Member' };
+type Role = 'owner' | 'team_admin' | 'member';
+const ROLES: Role[] = ['owner', 'team_admin', 'member'];
+const ROLE_LABEL: Record<Role, string> = {
+  owner: 'Owner',
+  team_admin: 'Team admin',
+  member: 'Member',
+};
 
 interface Member {
   id: string;
@@ -39,13 +43,14 @@ interface Me {
   id: string;
   email: string;
   name: string;
+  isSuperAdmin?: boolean;
 }
 
 const rolesYouCanAssign = (myRole: Role, target: Role): Role[] => {
   if (myRole === 'owner') return ROLES;
-  if (myRole === 'admin') {
+  if (myRole === 'team_admin') {
     if (target === 'owner') return ['owner'];
-    return ['admin', 'member'];
+    return ['team_admin', 'member'];
   }
   return [target];
 };
@@ -63,13 +68,15 @@ export function TeamAdminPage() {
     queryKey: ['team', teamSlug],
     queryFn: () => api.get<Team>('/teams/' + teamSlug),
   });
+  // Super admins can manage every team without being a member.
+  const canManage =
+    !!me?.isSuperAdmin || team?.myRole === 'owner' || team?.myRole === 'team_admin';
+
   const { data: invites = [] } = useQuery({
     queryKey: ['invites', teamSlug],
     queryFn: () => api.get<Invite[]>('/teams/' + teamSlug + '/invites'),
-    enabled: !!team && (team.myRole === 'owner' || team.myRole === 'admin'),
+    enabled: !!team && canManage,
   });
-
-  const canManage = team?.myRole === 'owner' || team?.myRole === 'admin';
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['team', teamSlug] });
@@ -102,7 +109,7 @@ export function TeamAdminPage() {
   const [justCreated, setJustCreated] = useState<Invite | null>(null);
 
   const membersSorted = useMemo(() => {
-    const order: Record<Role, number> = { owner: 0, admin: 1, member: 2 };
+    const order: Record<Role, number> = { owner: 0, team_admin: 1, member: 2 };
     return [...(team?.members ?? [])].sort(
       (a, b) => order[a.role] - order[b.role] || a.user.name.localeCompare(b.user.name),
     );
@@ -185,7 +192,10 @@ export function TeamAdminPage() {
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as Role)}
             >
-              {(team.myRole === 'owner' ? ROLES : (['admin', 'member'] as Role[])).map((r) => (
+              {(me?.isSuperAdmin || team.myRole === 'owner'
+                ? ROLES
+                : (['team_admin', 'member'] as Role[])
+              ).map((r) => (
                 <option key={r} value={r}>{ROLE_LABEL[r]}</option>
               ))}
             </select>
@@ -291,13 +301,15 @@ export function TeamAdminPage() {
         <div className={s.list}>
           {membersSorted.map((m) => {
             const isSelf = m.user.id === me?.id;
-            const options = rolesYouCanAssign(team.myRole, m.role);
+            // Super admins act as if they were owners for role-assignment UI.
+            const effectiveRole: Role = me?.isSuperAdmin ? 'owner' : team.myRole;
+            const options = rolesYouCanAssign(effectiveRole, m.role);
             const canEditRole =
               options.length > 1 &&
               !(isSelf && m.role === 'owner'); // don't let owner demote themselves from UI; backend also prevents last-owner demotion
             const canRemove =
               !isSelf &&
-              (team.myRole === 'owner' || m.role !== 'owner');
+              (effectiveRole === 'owner' || m.role !== 'owner');
             return (
               <div key={m.id} className={s.memberRow}>
                 <div className={s.avatar}>{m.user.name.charAt(0).toUpperCase()}</div>

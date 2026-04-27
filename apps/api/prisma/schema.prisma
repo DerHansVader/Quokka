@@ -12,6 +12,9 @@ model User {
   email        String       @unique
   passwordHash String
   name         String
+  // Instance-level super admin: can see and manage every team and user.
+  // One Quokka instance is one company; the first user becomes super admin.
+  isSuperAdmin Boolean      @default(false)
   createdAt    DateTime     @default(now())
   memberships  TeamMember[]
   apiKeys      ApiKey[]
@@ -30,7 +33,7 @@ model TeamMember {
   id     String @id @default(uuid()) @db.Uuid
   teamId String @db.Uuid
   userId String @db.Uuid
-  role   String @default("member") // owner | admin | member
+  role   String @default("member") // owner | team_admin | member
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
