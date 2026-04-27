@@ -53,7 +53,7 @@ export function RunViewerPage() {
   const {
     mode, setMode, panels, updatePanel,
     addCanvasPanel, removeCanvasPanel, removeCanvasPanels,
-    groups, addGroup, removeGroup,
+    groups, addGroup, removeGroup, renameGroup, moveGroupPanels,
     viewport, setViewport,
   } = usePersistedPanels('run', runId, keys);
 
@@ -198,6 +198,8 @@ export function RunViewerPage() {
                 groups={groups}
                 onAddGroup={addGroup}
                 onRemoveGroup={removeGroup}
+                onRenameGroup={renameGroup}
+                onMoveGroup={moveGroupPanels}
               />
             ) : (
               <PanelGrid

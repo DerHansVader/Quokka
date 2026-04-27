@@ -8,6 +8,7 @@ import { Canvas } from '../components/Canvas';
 import { RunSidebar } from '../components/RunSidebar';
 import { SettingsDrawer } from '../components/SettingsDrawer';
 import { ViewModeToggle } from '../components/ViewModeToggle';
+import { MultiRunSamples } from '../components/MultiRunSamples';
 import { useRunDisplay } from '../hooks/useRunDisplay';
 import { usePersistedPanels } from '../hooks/usePersistedPanels';
 import type { RunSeriesEntry } from '../components/Panel';
@@ -27,6 +28,7 @@ interface Run {
 export function RunsPage() {
   const { teamSlug, projectSlug } = useParams<{ teamSlug: string; projectSlug: string }>();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [tab, setTab] = useState<'charts' | 'samples'>('charts');
 
   const { data: project } = useQuery({
     queryKey: ['project', teamSlug, projectSlug],
@@ -43,10 +45,7 @@ export function RunsPage() {
   const runIds = useMemo(() => runs?.map((r) => r.id) || [], [runs]);
   const { display, update, toggleAll } = useRunDisplay(project?.id, runIds);
 
-  const visibleRunIds = useMemo(
-    () => runIds.filter((id) => display[id]?.visible !== false),
-    [runIds, display],
-  );
+  const hasVisibleRun = runIds.some((id) => display[id]?.visible !== false);
 
   const { data: allKeys } = useQuery({
     queryKey: ['project-keys', project?.id],
@@ -58,17 +57,19 @@ export function RunsPage() {
   const {
     mode, setMode, panels, updatePanel,
     addCanvasPanel, removeCanvasPanel, removeCanvasPanels,
-    groups, addGroup, removeGroup,
+    groups, addGroup, removeGroup, renameGroup, moveGroupPanels,
     viewport, setViewport,
   } = usePersistedPanels('project', project?.id, allKeys);
 
+  // Fetch series for *all* runs — visibility is toggled live in the chart
+  // without re-fetching or rebuilding so hide/show feels instant.
   const { data: compareData } = useQuery({
-    queryKey: ['project-series', project?.id, visibleRunIds, allKeys],
+    queryKey: ['project-series', project?.id, runIds, allKeys],
     queryFn: () =>
       api.get<Record<string, Record<string, MetricPoint[]>>>(
-        '/compare?runs=' + visibleRunIds.join(',') + '&keys=' + (allKeys ?? []).join(','),
+        '/compare?runs=' + runIds.join(',') + '&keys=' + (allKeys ?? []).join(','),
       ),
-    enabled: !!allKeys?.length && visibleRunIds.length > 0,
+    enabled: !!allKeys?.length && runIds.length > 0,
     refetchInterval: 5000,
   });
 
@@ -80,8 +81,8 @@ export function RunsPage() {
     const xAxis = panel.xAxis || 'step';
     const xSeriesByRun = !isBuiltinXAxis(xAxis) ? compareData[xAxis] : undefined;
 
-    return visibleRunIds
-      .map((id) => {
+    return runIds
+      .map((id): RunSeriesEntry | null => {
         const run = runs.find((r) => r.id === id);
         if (!run) return null;
         const raw = byRun[id];
@@ -96,6 +97,7 @@ export function RunsPage() {
           label: run.displayName || run.name,
           color: display[id]?.color || '#a78bfa',
           points,
+          visible: display[id]?.visible !== false,
         };
       })
       .filter((x): x is RunSeriesEntry => x !== null);
@@ -143,14 +145,14 @@ export function RunsPage() {
         />
       </aside>
 
-      <section className={[s.main, editingIndex !== null ? s.mainShifted : ''].join(' ')}>
+      <section className={[s.main, editingIndex !== null && tab === 'charts' ? s.mainShifted : ''].join(' ')}>
         {!runs?.length ? (
           <EmptyState
             title="No runs yet"
             hint="Push data from your training script using the SDK"
             iconPath="M22 12h-4l-3 9L9 3l-3 9H2"
           />
-        ) : visibleRunIds.length === 0 ? (
+        ) : !hasVisibleRun ? (
           <EmptyState
             title="All runs hidden"
             hint="Toggle runs in the sidebar to compare them"
@@ -159,9 +161,33 @@ export function RunsPage() {
         ) : (
           <>
             <div className={s.toolbar}>
-              <ViewModeToggle value={mode} onChange={setMode} />
+              <div className={s.tabs}>
+                {(['charts', 'samples'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={[s.tab, tab === t ? s.tabActive : ''].join(' ')}
+                  >
+                    {t === 'charts' ? 'Charts' : 'Samples'}
+                  </button>
+                ))}
+              </div>
+              {tab === 'charts' && <ViewModeToggle value={mode} onChange={setMode} />}
             </div>
-            {mode === 'canvas' ? (
+            {tab === 'samples' ? (
+              <MultiRunSamples
+                runs={runIds
+                  .filter((id) => display[id]?.visible !== false)
+                  .map((id) => {
+                    const r = runs!.find((r) => r.id === id)!;
+                    return {
+                      id,
+                      label: r.displayName || r.name,
+                      color: display[id]?.color || '#a78bfa',
+                    };
+                  })}
+              />
+            ) : mode === 'canvas' ? (
               <Canvas
                 panels={panels}
                 runsForPanel={runsForPanel}
@@ -177,6 +203,8 @@ export function RunsPage() {
                 groups={groups}
                 onAddGroup={addGroup}
                 onRemoveGroup={removeGroup}
+                onRenameGroup={renameGroup}
+                onMoveGroup={moveGroupPanels}
               />
             ) : (
               <PanelGrid
@@ -193,7 +221,7 @@ export function RunsPage() {
       </section>
 
       <SettingsDrawer
-        config={editingIndex !== null ? panels[editingIndex] ?? null : null}
+        config={editingIndex !== null && tab === 'charts' ? panels[editingIndex] ?? null : null}
         onChange={(c) => editingIndex !== null && updatePanel(editingIndex, c)}
         onClose={() => setEditingIndex(null)}
         availableKeys={allKeys || []}

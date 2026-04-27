@@ -31,8 +31,9 @@ export interface PanelConfig {
   outlier: { pct: number };
   xScale: ScaleType;
   yScale: ScaleType;
-  xDomain?: [number, number];
-  yDomain?: [number, number];
+  /** `[min, max]` — either side may be `null` to leave it auto-scaled. */
+  xDomain?: [number | null, number | null];
+  yDomain?: [number | null, number | null];
   /** `step` | `relativeTime` | `wallTime` | any metric key. Default `step`. */
   xAxis?: string;
   /** Stable id, used in canvas mode for drag/drop and uniqueness across duplicates. */

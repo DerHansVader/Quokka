@@ -210,3 +210,28 @@
 .rangeInput::placeholder { color: var(--text-muted); }
 .rangeInput:hover { background: var(--surface-3); }
 .rangeInput:focus { box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* segmented Linear / Log toggle */
+.segGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+}
+.segBtn {
+  height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border-radius: calc(var(--r-sm) - 2px);
+  cursor: pointer;
+  transition: color var(--d-fast) var(--ease), background-color var(--d-fast) var(--ease);
+}
+.segBtn:hover { color: var(--text-secondary); }
+.segBtnActive {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}

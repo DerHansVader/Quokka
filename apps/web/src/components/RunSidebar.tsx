@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { RunDisplayMap } from '../hooks/useRunDisplay';
+import { useHoverStore } from '../stores/hover';
 import s from './RunSidebar.module.css';
 
 interface Run {
@@ -20,6 +21,7 @@ interface Props {
 
 export function RunSidebar({ teamSlug, projectSlug, runs, display, onUpdate, onToggleAll }: Props) {
   const allVisible = runs.length > 0 && runs.every((r) => display[r.id]?.visible !== false);
+  const setHovered = useHoverStore((s) => s.setRunId);
 
   return (
     <div className={s.root}>
@@ -41,19 +43,20 @@ export function RunSidebar({ teamSlug, projectSlug, runs, display, onUpdate, onT
             run.status === 'running' ? s.statusRunning :
             run.status === 'crashed' ? s.statusCrashed : '';
           return (
-            <div key={run.id} className={s.item}>
+            <div
+              key={run.id}
+              className={s.item}
+              onMouseEnter={() => d.visible && setHovered(run.id)}
+              onMouseLeave={() => setHovered(null)}
+            >
               <button
                 onClick={() => onUpdate(run.id, { visible: !d.visible })}
                 className={s.visBtn}
                 title={d.visible ? 'Hide' : 'Show'}
+                aria-pressed={d.visible}
+                style={{ color: d.visible ? d.color : 'var(--text-muted)' }}
               >
-                <span
-                  className={s.vis}
-                  style={{
-                    background: d.visible ? d.color : 'transparent',
-                    boxShadow: d.visible ? 'none' : 'inset 0 0 0 1.5px rgba(255,255,255,0.18)',
-                  }}
-                />
+                <EyeIcon open={d.visible} />
               </button>
 
               <label className={s.colorBtn} title="Change color">
@@ -80,5 +83,23 @@ export function RunSidebar({ teamSlug, projectSlug, runs, display, onUpdate, onT
         })}
       </div>
     </div>
+  );
+}
+
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
   );
 }

@@ -1,19 +1,27 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import type { PanelConfig } from '@quokka/shared';
 import { smooth, excludeOutliers, isWindowType } from '../lib/smoothing';
 import { alignRunValues, plotValues } from './panelData';
+import { buildRange } from '../lib/panelRange';
+import { useHoverStore } from '../stores/hover';
 import s from './Panel.module.css';
 
 const SYNC_KEY = 'wt-panels';
 const DEFAULT_HEIGHT = 240;
+const STROKE_NORMAL = 1.75;
+const STROKE_HIGHLIGHT = 2.75;
+const STROKE_DIM_ALPHA = 0.18;
 
 export interface RunSeriesEntry {
   runId: string;
   label: string;
   color: string;
   points: { x: number; y: number }[];
+  /** When false, the series is registered but hidden — toggled live without rebuild. */
+  visible?: boolean;
 }
 
 interface PanelProps {
@@ -41,13 +49,26 @@ const withAlpha = (hex: string, a: number) => {
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+
 export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: PanelProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<uPlot | null>(null);
+  /** Index in `runs` whose line the cursor is closest to. -1 when off-chart. */
+  const closestRef = useRef<number>(-1);
+  /** Stable references to the *current* runs array — used by hooks
+   *  that should not retrigger plot rebuilds when only visibility/hover change. */
+  const runsRef = useRef(runs);
+  runsRef.current = runs;
 
-  // (re)build the plot when data or config changes
+  const setHoveredRun = useHoverStore((s) => s.setRunId);
+  const hoveredRunId = useHoverStore((s) => s.runId);
+
+  // (re)build the plot when data or visual config changes.
+  // NOTE: We deliberately exclude `runs[i].visible` from this dependency: it's
+  // applied later via `setSeries(i, { show })` so toggling visibility doesn't
+  // tear down and rebuild the entire chart.
   useEffect(() => {
     const host = hostRef.current;
     if (!host || runs.length === 0) return;
@@ -85,15 +106,17 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
           width: 0.75,
           spanGaps: true,
           points: { show: false },
+          show: r.visible !== false,
         }))
       : [];
 
     const mainSeries = runs.map((r) => ({
       label: r.label,
       stroke: r.color,
-      width: 1.75,
+      width: STROKE_NORMAL,
       spanGaps: true,
       points: { show: false },
+      show: r.visible !== false,
     }));
 
     const isTime = config.xAxis === 'wallTime';
@@ -125,6 +148,9 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
     const width = Math.max(1, host.clientWidth);
     const effectiveHeight = fill && wrap ? Math.max(1, wrap.clientHeight) : height;
 
+    const xLog = config.xScale === 'log';
+    const yLog = config.yScale === 'log';
+
     const opts: uPlot.Options = {
       width,
       height: effectiveHeight,
@@ -138,10 +164,14 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
         points: { size: 5 },
       },
       scales: {
-        x: { distr: config.xScale === 'log' ? 3 : 1, time: isTime },
+        x: {
+          distr: xLog ? 3 : 1,
+          time: isTime,
+          range: buildRange(xLog, config.xDomain?.[0], config.xDomain?.[1]),
+        },
         y: {
-          distr: config.yScale === 'log' ? 3 : 1,
-          ...(config.yDomain ? { range: config.yDomain } : {}),
+          distr: yLog ? 3 : 1,
+          range: buildRange(yLog, config.yDomain?.[0], config.yDomain?.[1]),
         },
       },
       axes: [xAxis, yAxis],
@@ -152,16 +182,38 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
             const tip = tipRef.current;
             if (!tip) return;
             const idx = u.cursor.idx;
+            const cy = u.cursor.top ?? -1;
             const x = idx != null && idx >= 0 ? u.data[0][idx] : null;
-            if (x == null || !Number.isFinite(x)) {
+            if (x == null || !Number.isFinite(x) || cy < 0) {
               tip.style.display = 'none';
+              closestRef.current = -1;
+              setHoveredRun(null);
               return;
             }
-            const rows = runs
+
+            // Find which series is closest (in pixels) to the cursor's y.
+            let closest = -1;
+            let best = Infinity;
+            for (let i = 0; i < runsRef.current.length; i++) {
+              if (runsRef.current[i].visible === false) continue;
+              const v = u.data[smoothedStart + i]?.[idx!];
+              if (v == null || !Number.isFinite(v as number)) continue;
+              const py = u.valToPos(v as number, 'y');
+              const d = Math.abs(py - cy);
+              if (d < best) { best = d; closest = i; }
+            }
+            if (closest !== closestRef.current) {
+              closestRef.current = closest;
+              setHoveredRun(closest >= 0 ? runsRef.current[closest].runId : null);
+            }
+
+            const rows = runsRef.current
               .map((r, i) => {
+                if (r.visible === false) return '';
                 const y = u.data[smoothedStart + i]?.[idx!];
+                const cls = s.tipRow + (i === closest ? ' ' + s.tipRowActive : '');
                 return (
-                  `<div class="${s.tipRow}">` +
+                  `<div class="${cls}">` +
                   `<span class="${s.tipSwatch}" style="background:${r.color}"></span>` +
                   `<span class="${s.tipName}">${esc(r.label)}</span>` +
                   `<span class="${s.tipValue}">${fmt(y)}</span>` +
@@ -173,14 +225,24 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
               `<div class="${s.tipHead}">${esc(formatX(x as number))}</div>` + rows;
             tip.style.display = 'block';
 
+            // Position the tooltip in *viewport* coordinates so it can extend
+            // outside of the panel without ever getting clipped.
+            const root = u.root.getBoundingClientRect();
             const left = u.cursor.left ?? 0;
-            const top = u.cursor.top ?? 0;
-            const rootW = u.root.getBoundingClientRect().width;
-            const tipW = tip.offsetWidth;
+            const top = cy;
             const off = 12;
-            const x1 = left + off + tipW > rootW ? left - tipW - off : left + off;
-            tip.style.left = Math.max(0, x1) + 'px';
-            tip.style.top = Math.max(0, top + off) + 'px';
+            const tipW = tip.offsetWidth;
+            const tipH = tip.offsetHeight;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            let x1 = root.left + left + off;
+            if (x1 + tipW > vw - 8) x1 = root.left + left - tipW - off;
+            if (x1 < 8) x1 = 8;
+            let y1 = root.top + top + off;
+            if (y1 + tipH > vh - 8) y1 = vh - tipH - 8;
+            if (y1 < 8) y1 = 8;
+            tip.style.left = x1 + 'px';
+            tip.style.top = y1 + 'px';
           },
         ],
       },
@@ -213,6 +275,66 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
     return () => ro.disconnect();
   }, [height, fill]);
 
+  // Toggle series visibility live (no plot rebuild).
+  useEffect(() => {
+    const u = plotRef.current;
+    if (!u) return;
+    const drawRaw = config.smoothing.type !== 'none' && config.showRaw !== false;
+    const offset = drawRaw ? runs.length : 0;
+    runs.forEach((r, i) => {
+      const visible = r.visible !== false;
+      const mainIdx = 1 + offset + i;
+      if (u.series[mainIdx] && u.series[mainIdx].show !== visible) {
+        u.setSeries(mainIdx, { show: visible });
+      }
+      if (drawRaw) {
+        const rawIdx = 1 + i;
+        if (u.series[rawIdx] && u.series[rawIdx].show !== visible) {
+          u.setSeries(rawIdx, { show: visible });
+        }
+      }
+    });
+  }, [runs, config.smoothing.type, config.showRaw]);
+
+  // Cross-plot hover highlight: thicken the hovered run, dim the rest.
+  useEffect(() => {
+    const u = plotRef.current;
+    if (!u) return;
+    const drawRaw = config.smoothing.type !== 'none' && config.showRaw !== false;
+    const offset = drawRaw ? runs.length : 0;
+
+    runs.forEach((r, i) => {
+      const mainIdx = 1 + offset + i;
+      const series = u.series[mainIdx];
+      if (!series) return;
+      if (hoveredRunId == null) {
+        series.stroke = r.color;
+        series.width = STROKE_NORMAL;
+      } else if (r.runId === hoveredRunId) {
+        series.stroke = r.color;
+        series.width = STROKE_HIGHLIGHT;
+      } else {
+        series.stroke = withAlpha(r.color, STROKE_DIM_ALPHA);
+        series.width = STROKE_NORMAL;
+      }
+    });
+    u.redraw(false);
+  }, [hoveredRunId, runs, config.smoothing.type, config.showRaw]);
+
+  // Clear the global hover state when the cursor leaves the chart entirely.
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const onLeave = () => {
+      if (closestRef.current !== -1) {
+        closestRef.current = -1;
+        setHoveredRun(null);
+      }
+    };
+    host.addEventListener('mouseleave', onLeave);
+    return () => host.removeEventListener('mouseleave', onLeave);
+  }, [setHoveredRun]);
+
   return (
     <div
       ref={wrapRef}
@@ -224,7 +346,7 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
       ) : (
         <>
           <div ref={hostRef} className={s.host} />
-          <div ref={tipRef} className={s.tip} />
+          {createPortal(<div ref={tipRef} className={s.tip} />, document.body)}
         </>
       )}
     </div>

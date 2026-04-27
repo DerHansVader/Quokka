@@ -19,19 +19,32 @@ export function assignColor(index: number): string {
 
 /** Per-project run visibility + color, persisted in localStorage. */
 export function useRunDisplay(projectId: string | undefined, runIds: string[]) {
-  const storageKey = projectId ? `wt:run-display:${projectId}` : null;
+  const storageKey = projectId ? `qk:run-display:${projectId}` : null;
 
-  const [display, setDisplay] = useState<RunDisplayMap>(() => {
-    if (!storageKey) return {};
-    try {
-      return JSON.parse(localStorage.getItem(storageKey) || '{}');
-    } catch {
-      return {};
-    }
-  });
+  const [display, setDisplay] = useState<RunDisplayMap>({});
+  // Block default-fill and writeback until we've hydrated from storage —
+  // otherwise we clobber the saved state on every page load.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (!storageKey || runIds.length === 0) return;
+    if (!storageKey) return;
+    try {
+      // Migrate the old `wt:` key once, then forget it.
+      const legacy = localStorage.getItem(`wt:run-display:${projectId}`);
+      const raw = localStorage.getItem(storageKey) ?? legacy ?? '{}';
+      setDisplay(JSON.parse(raw));
+      if (legacy && !localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, legacy);
+        localStorage.removeItem(`wt:run-display:${projectId}`);
+      }
+    } catch {
+      setDisplay({});
+    }
+    setHydrated(true);
+  }, [storageKey, projectId]);
+
+  useEffect(() => {
+    if (!hydrated || runIds.length === 0) return;
     setDisplay((prev) => {
       const next = { ...prev };
       let changed = false;
@@ -43,11 +56,11 @@ export function useRunDisplay(projectId: string | undefined, runIds: string[]) {
       });
       return changed ? next : prev;
     });
-  }, [runIds.join(','), storageKey]);
+  }, [runIds.join(','), hydrated]);
 
   useEffect(() => {
-    if (storageKey) localStorage.setItem(storageKey, JSON.stringify(display));
-  }, [display, storageKey]);
+    if (hydrated && storageKey) localStorage.setItem(storageKey, JSON.stringify(display));
+  }, [display, storageKey, hydrated]);
 
   const update = (runId: string, patch: Partial<RunDisplay>) => {
     setDisplay((prev) => ({ ...prev, [runId]: { ...prev[runId], ...patch } }));

@@ -57,20 +57,16 @@
 .item:hover { background: var(--surface-2); }
 
 .visBtn {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+  transition: background-color var(--d-fast) var(--ease), transform var(--d-fast) var(--ease);
 }
-.vis {
-  width: 11px;
-  height: 11px;
-  border-radius: 4px;
-  transition: transform var(--d-fast) var(--ease);
-}
-.visBtn:hover .vis { transform: scale(1.12); }
+.visBtn:hover { background: var(--surface-3); transform: scale(1.06); }
 
 .colorBtn {
   position: relative;

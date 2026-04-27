@@ -12,19 +12,21 @@
   width: 100% !important;
 }
 .tip {
-  position: absolute;
-  z-index: 10;
+  position: fixed;
+  z-index: 1000;
   min-width: 180px;
-  max-width: 280px;
+  max-width: 320px;
   padding: 10px 12px;
   display: none;
   pointer-events: none;
   font-size: 12px;
   color: var(--text-primary);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: rgba(28, 28, 30, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-md);
-  box-shadow: var(--sh-2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 .tipHead {
   margin-bottom: 6px;
@@ -38,8 +40,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 1px 0;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity var(--d-fast) var(--ease);
 }
+.tipRowActive {
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 1;
+}
+.tipRowActive .tipName { color: var(--text-primary); font-weight: 600; }
+.tipRowActive .tipValue { font-weight: 600; }
 .tipSwatch {
   width: 7px;
   height: 7px;

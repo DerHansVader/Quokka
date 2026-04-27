@@ -30,13 +30,16 @@ interface Props {
   groups: GroupConfig[];
   onAddGroup: (panelIds: string[], name: string) => void;
   onRemoveGroup: (id: string) => void;
+  onRenameGroup: (id: string, name: string) => void;
+  onMoveGroup: (id: string, dx: number, dy: number) => void;
 }
 
 type Drag =
   | { kind: 'move'; id: string; sx: number; sy: number; x0: number; y0: number; x: number; y: number }
   | { kind: 'resize'; id: string; sx: number; sy: number; w0: number; h0: number; w: number; h: number }
   | { kind: 'pan'; sx: number; sy: number; vx0: number; vy0: number }
-  | { kind: 'marquee'; sx: number; sy: number; ex: number; ey: number };
+  | { kind: 'marquee'; sx: number; sy: number; ex: number; ey: number }
+  | { kind: 'groupMove'; id: string; sx: number; sy: number; dx: number; dy: number };
 
 interface CtxMenu {
   x: number; y: number;
@@ -55,13 +58,14 @@ export function Canvas({
   panels, runsForPanel, availableKeys, viewport, onViewportChange,
   onPanelChange, onPanelAdd, onPanelRemove, onPanelsRemove,
   onOpenSettings, editingIndex,
-  groups, onAddGroup, onRemoveGroup,
+  groups, onAddGroup, onRemoveGroup, onRenameGroup, onMoveGroup,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [vp, setVp] = useState<Viewport>(viewport);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ctx, setCtx] = useState<CtxMenu | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 
   useEffect(() => setVp(viewport), [viewport]);
 
@@ -117,6 +121,12 @@ export function Canvas({
           x: drag.vx0 + (e.clientX - drag.sx),
           y: drag.vy0 + (e.clientY - drag.sy),
         });
+      } else if (drag.kind === 'groupMove') {
+        setDrag({
+          ...drag,
+          dx: (e.clientX - drag.sx) / vp.zoom,
+          dy: (e.clientY - drag.sy) / vp.zoom,
+        });
       } else {
         const lp = localPoint(e);
         setDrag({ ...drag, ex: lp.x, ey: lp.y });
@@ -135,6 +145,8 @@ export function Canvas({
         });
       } else if (drag.kind === 'pan') {
         onViewportChange(vp);
+      } else if (drag.kind === 'groupMove') {
+        onMoveGroup(drag.id, snap(drag.dx / CELL), snap(drag.dy / CELL));
       } else {
         // marquee: select panels overlapping the rect (in world coords)
         const rx0 = Math.min(drag.sx, drag.ex);
@@ -166,7 +178,7 @@ export function Canvas({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [drag, vp, panels, onPanelChange, onViewportChange]);
+  }, [drag, vp, panels, onPanelChange, onViewportChange, onMoveGroup]);
 
   // ── canvas event handlers ────────────────────────────────────
   // Native non-passive listener so we can preventDefault() the page-zoom gesture.
@@ -356,10 +368,24 @@ export function Canvas({
   };
 
   // ── render ───────────────────────────────────────────────────
+  const movingGroupIds = (() => {
+    if (drag?.kind !== 'groupMove') return new Set<string>();
+    const g = groups.find((g) => g.id === drag.id);
+    return new Set(g?.panelIds ?? []);
+  })();
+
   const renderedPanels = panels.map((p) => {
     if (drag && 'id' in drag && drag.id === p.id) {
       if (drag.kind === 'move')   return { ...p, x: drag.x / CELL, y: drag.y / CELL };
       if (drag.kind === 'resize') return { ...p, w: drag.w, h: drag.h };
+    }
+    // Member of a group currently being dragged → translate by the live delta.
+    if (p.id && movingGroupIds.has(p.id) && drag?.kind === 'groupMove') {
+      return {
+        ...p,
+        x: (p.x ?? 0) + drag.dx / CELL,
+        y: (p.y ?? 0) + drag.dy / CELL,
+      };
     }
     return p;
   });
@@ -386,6 +412,21 @@ export function Canvas({
       };
     }
   }
+
+  const startGroupMove = (e: React.MouseEvent, g: GroupConfig) => {
+    if (e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey) return;  // root will pan
+    e.stopPropagation();
+    setCtx(null);
+    setDrag({ kind: 'groupMove', id: g.id, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0 });
+  };
+
+  const commitGroupRename = (id: string, raw: string) => {
+    const name = raw.trim();
+    const g = groups.find((g) => g.id === id);
+    if (g && name && name !== g.name) onRenameGroup(id, name);
+    setEditingGroupId(null);
+  };
 
   return (
     <div
@@ -424,22 +465,53 @@ export function Canvas({
           {groups.map((g) => {
             const b = bbox(g.panelIds);
             if (!b) return null;
+            const isDragging = drag?.kind === 'groupMove' && drag.id === g.id;
+            const isEditing = editingGroupId === g.id;
+            const offX = isDragging ? drag.dx : 0;
+            const offY = isDragging ? drag.dy : 0;
             const PAD = 12;
             return (
               <div
                 key={g.id}
-                className={s.group}
+                className={[s.group, isDragging ? s.groupDragging : ''].join(' ')}
                 style={{
-                  left: b.lx - PAD,
-                  top: b.ly - PAD,
+                  left: b.lx - PAD + offX,
+                  top: b.ly - PAD + offY,
                   width: b.hx - b.lx + PAD * 2,
                   height: b.hy - b.ly + PAD * 2,
                 }}
               >
-                <div className={s.groupLabel}>
-                  <span>{g.name}</span>
+                <div
+                  className={s.groupLabel}
+                  onMouseDown={(e) => !isEditing && startGroupMove(e, g)}
+                >
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      defaultValue={g.name}
+                      className={s.groupNameInput}
+                      onBlur={(e) => commitGroupRename(g.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        else if (e.key === 'Escape') setEditingGroupId(null);
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span
+                      className={s.groupName}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingGroupId(g.id);
+                      }}
+                      title="Drag to move • double-click to rename"
+                    >
+                      {g.name}
+                    </span>
+                  )}
                   <button
                     className={s.groupClose}
+                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => onRemoveGroup(g.id)}
                     title="Ungroup"
                   >
@@ -449,6 +521,26 @@ export function Canvas({
               </div>
             );
           })}
+
+          {/* Snap-preview ghost for the group being dragged. */}
+          {drag?.kind === 'groupMove' && (() => {
+            const g = groups.find((g) => g.id === drag.id);
+            if (!g) return null;
+            const b = bbox(g.panelIds);
+            if (!b) return null;
+            const PAD = 12;
+            return (
+              <div
+                className={s.groupGhost}
+                style={{
+                  left: b.lx - PAD + snap(drag.dx / CELL) * CELL,
+                  top: b.ly - PAD + snap(drag.dy / CELL) * CELL,
+                  width: b.hx - b.lx + PAD * 2,
+                  height: b.hy - b.ly + PAD * 2,
+                }}
+              />
+            );
+          })()}
 
           {ghost && (
             <div

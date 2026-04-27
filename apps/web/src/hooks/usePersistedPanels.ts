@@ -162,6 +162,30 @@ export function usePersistedPanels(
     });
   };
 
+  const renameGroup = (id: string, name: string) => {
+    persist({
+      ...layout,
+      canvas: {
+        ...layout.canvas,
+        groups: layout.canvas.groups.map((g) => (g.id === id ? { ...g, name } : g)),
+      },
+    });
+  };
+
+  /** Translate every panel in a group by an integer cell delta. */
+  const moveGroupPanels = (id: string, dx: number, dy: number) => {
+    if (dx === 0 && dy === 0) return;
+    const g = layout.canvas.groups.find((g) => g.id === id);
+    if (!g) return;
+    const idSet = new Set(g.panelIds);
+    const next = layout.canvas.panels.map((p) =>
+      p.id && idSet.has(p.id)
+        ? { ...p, x: (p.x ?? 0) + dx, y: (p.y ?? 0) + dy }
+        : p,
+    );
+    persist({ ...layout, canvas: { ...layout.canvas, panels: next } });
+  };
+
   const setViewport = (v: { x: number; y: number; zoom: number }) => {
     persist({ ...layout, canvas: { ...layout.canvas, viewport: v } });
   };
@@ -177,6 +201,8 @@ export function usePersistedPanels(
     groups: layout.canvas.groups,
     addGroup,
     removeGroup,
+    renameGroup,
+    moveGroupPanels,
     viewport: layout.canvas.viewport,
     setViewport,
     isLoading: !view,

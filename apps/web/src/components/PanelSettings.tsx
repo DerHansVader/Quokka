@@ -114,28 +114,10 @@ export function PanelSettings({ config, onChange, onClose, availableKeys }: Prop
 
         <Field label="Scale">
           <div className={s.pair}>
-            <div>
-              <div className={s.pairLabel}>X</div>
-              <select
-                value={config.xScale}
-                onChange={(e) => update({ xScale: e.target.value as ScaleType })}
-                className={s.select}
-              >
-                <option value="linear">Linear</option>
-                <option value="log">Log</option>
-              </select>
-            </div>
-            <div>
-              <div className={s.pairLabel}>Y</div>
-              <select
-                value={config.yScale}
-                onChange={(e) => update({ yScale: e.target.value as ScaleType })}
-                className={s.select}
-              >
-                <option value="linear">Linear</option>
-                <option value="log">Log</option>
-              </select>
-            </div>
+            <ScaleToggle label="X" value={config.xScale}
+              onChange={(v) => update({ xScale: v })} />
+            <ScaleToggle label="Y" value={config.yScale}
+              onChange={(v) => update({ yScale: v })} />
           </div>
         </Field>
 
@@ -198,24 +180,30 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
+type Domain = [number | null, number | null] | undefined;
+
 function RangeInputs({
   value, onChange,
-}: { value?: [number, number]; onChange: (v: [number, number] | undefined) => void }) {
-  // Track raw text locally so partial input (e.g. only "min" filled in)
-  // doesn't get wiped by the parent clearing the value.
-  const [lo, setLo] = useState(value ? String(value[0]) : '');
-  const [hi, setHi] = useState(value ? String(value[1]) : '');
+}: { value: Domain; onChange: (v: Domain) => void }) {
+  // Track raw text locally so partial input (e.g. only "min") doesn't get
+  // wiped by the parent normalizing the saved value.
+  const initLo = value?.[0] != null ? String(value[0]) : '';
+  const initHi = value?.[1] != null ? String(value[1]) : '';
+  const [lo, setLo] = useState(initLo);
+  const [hi, setHi] = useState(initHi);
 
   useEffect(() => {
-    setLo(value ? String(value[0]) : '');
-    setHi(value ? String(value[1]) : '');
+    setLo(value?.[0] != null ? String(value[0]) : '');
+    setHi(value?.[1] != null ? String(value[1]) : '');
   }, [value]);
 
   const commit = (loStr: string, hiStr: string) => {
-    const a = parseFloat(loStr);
-    const b = parseFloat(hiStr);
-    if (Number.isFinite(a) && Number.isFinite(b)) onChange([a, b]);
-    else if (loStr === '' && hiStr === '') onChange(undefined);
+    const a = loStr.trim() === '' ? null : parseFloat(loStr);
+    const b = hiStr.trim() === '' ? null : parseFloat(hiStr);
+    const min = Number.isFinite(a as number) ? (a as number) : null;
+    const max = Number.isFinite(b as number) ? (b as number) : null;
+    if (min == null && max == null) onChange(undefined);
+    else onChange([min, max]);
   };
 
   return (
@@ -226,6 +214,30 @@ function RangeInputs({
       <input type="number" placeholder="max" value={hi}
         onChange={(e) => { setHi(e.target.value); commit(lo, e.target.value); }}
         className={s.rangeInput} />
+    </div>
+  );
+}
+
+function ScaleToggle({
+  label, value, onChange,
+}: { label: string; value: ScaleType; onChange: (v: ScaleType) => void }) {
+  return (
+    <div>
+      <div className={s.pairLabel}>{label}</div>
+      <div className={s.segGroup} role="radiogroup">
+        {(['linear', 'log'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={value === v}
+            onClick={() => onChange(v)}
+            className={[s.segBtn, value === v ? s.segBtnActive : ''].join(' ')}
+          >
+            {v === 'linear' ? 'Linear' : 'Log'}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
