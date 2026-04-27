@@ -12,6 +12,7 @@ interface Team {
   id: string;
   slug: string;
   name: string;
+  icon: string | null;
   _count: { projects: number; members: number };
 }
 
@@ -103,7 +104,9 @@ export function TeamsPage() {
         <div className={s.list}>
           {teams!.map((team) => (
             <Link key={team.id} to={'/' + team.slug} className={s.row}>
-              <div className={s.mono}>{team.name.charAt(0).toUpperCase()}</div>
+              <div className={s.mono}>
+                {team.icon || team.name.charAt(0).toUpperCase()}
+              </div>
               <div className={s.info}>
                 <div className={s.title}>{team.name}</div>
                 <div className={s.meta}>

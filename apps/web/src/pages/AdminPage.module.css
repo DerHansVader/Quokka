@@ -103,3 +103,123 @@
   .row { flex-wrap: wrap; }
   .actions { flex-basis: 100%; justify-content: flex-end; }
 }
+
+/* ── Per-user expanded editor ───────────── */
+.userBlock {
+  display: flex;
+  flex-direction: column;
+}
+.editor {
+  margin: 4px 0 8px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.editorList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.editorRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+}
+.editorRow:hover { background: var(--surface-3); }
+.editorTeam { flex: 1; font-size: 13px; color: var(--text-primary); }
+.editorSelect {
+  height: 30px;
+  padding: 0 28px 0 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background-color: var(--surface-3);
+  border-radius: var(--r-sm);
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23b2b2b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.editorAdd {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--surface-3);
+}
+
+/* ── Create user form ─────────────────── */
+.createForm {
+  margin-bottom: 32px;
+  padding: 18px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideDown 240ms var(--ease) both;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.createGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.toggleRow input { accent-color: var(--accent); }
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.teamPicks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.teamPickRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+}
+.teamPickRow:hover { background: var(--surface-3); }
+.teamPickName {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.teamPickName input { accent-color: var(--accent); }
+
+.createActions { display: flex; justify-content: flex-end; }

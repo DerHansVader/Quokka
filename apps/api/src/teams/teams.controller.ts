@@ -11,7 +11,14 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TeamsService } from './teams.service';
-import { CreateTeamDto, InviteMemberDto, JoinTeamDto, UpdateRoleDto } from './teams.dto';
+import {
+  AddMemberDto,
+  CreateTeamDto,
+  InviteMemberDto,
+  JoinTeamDto,
+  UpdateRoleDto,
+  UpdateTeamDto,
+} from './teams.dto';
 import { CurrentUser } from '../common/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -41,6 +48,32 @@ export class TeamsController {
   @Get(':slug')
   getBySlug(@Param('slug') slug: string, @CurrentUser() user: any) {
     return this.teamsService.getBySlug(slug, user);
+  }
+
+  @Patch(':slug')
+  async update(
+    @Param('slug') slug: string,
+    @CurrentUser() user: any,
+    @Body() dto: UpdateTeamDto,
+  ) {
+    const teamId = await this.resolveTeamId(slug);
+    return this.teamsService.update(teamId, user, dto);
+  }
+
+  @Get(':slug/candidate-users')
+  async listCandidates(@Param('slug') slug: string, @CurrentUser() user: any) {
+    const teamId = await this.resolveTeamId(slug);
+    return this.teamsService.listCandidateUsers(teamId, user);
+  }
+
+  @Post(':slug/members')
+  async addMember(
+    @Param('slug') slug: string,
+    @CurrentUser() user: any,
+    @Body() dto: AddMemberDto,
+  ) {
+    const teamId = await this.resolveTeamId(slug);
+    return this.teamsService.addExistingMember(teamId, user, dto);
   }
 
   @Post(':slug/invites')

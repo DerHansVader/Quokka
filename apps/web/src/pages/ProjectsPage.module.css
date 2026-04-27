@@ -6,6 +6,7 @@
 
 .createForm {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
   margin-bottom: 32px;
@@ -14,7 +15,85 @@
   border-radius: var(--r-lg);
   animation: slideDown 260ms var(--ease) both;
 }
-.createField { flex: 1; max-width: 320px; }
+.createField { flex: 1; min-width: 200px; max-width: 320px; }
+.createVis { flex-shrink: 0; }
+.fieldLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: 3px;
+  height: 42px;
+}
+.seg, .segOn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--d-fast) var(--ease), color var(--d-fast) var(--ease);
+}
+.seg:hover { color: var(--text-primary); }
+.segOn {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.accessPicker {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+.checkList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.checkRow:hover { background: var(--surface-3); }
+.checkRow input[type='checkbox'] { accent-color: var(--accent); }
+.checkMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.checkSelf {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-faint);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-6px); }
@@ -38,6 +117,42 @@
 }
 .card:hover { background: var(--surface-2); }
 
+.pin, .pinOn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  background: transparent;
+  opacity: 0;
+  transition: opacity var(--d-fast) var(--ease), color var(--d-fast) var(--ease), background-color var(--d-fast) var(--ease);
+  cursor: pointer;
+}
+.pin:hover { background: var(--surface-3); color: var(--text-primary); }
+.card:hover .pin { opacity: 1; }
+.pinOn {
+  opacity: 1;
+  color: var(--accent);
+}
+.pinOn:hover { background: var(--accent-faint); }
+
+.visTag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  justify-content: center;
+}
+
 .badge {
   width: 40px;
   height: 40px;
@@ -56,6 +171,8 @@
 }
 
 .name {
+  display: flex;
+  align-items: center;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.015em;

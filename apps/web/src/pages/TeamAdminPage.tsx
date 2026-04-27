@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -26,6 +26,7 @@ interface Team {
   id: string;
   slug: string;
   name: string;
+  icon: string | null;
   myRole: Role;
   members: Member[];
 }
@@ -44,6 +45,12 @@ interface Me {
   email: string;
   name: string;
   isSuperAdmin?: boolean;
+}
+
+interface Candidate {
+  id: string;
+  email: string;
+  name: string;
 }
 
 const rolesYouCanAssign = (myRole: Role, target: Role): Role[] => {
@@ -68,19 +75,26 @@ export function TeamAdminPage() {
     queryKey: ['team', teamSlug],
     queryFn: () => api.get<Team>('/teams/' + teamSlug),
   });
-  // Super admins can manage every team without being a member.
   const canManage =
     !!me?.isSuperAdmin || team?.myRole === 'owner' || team?.myRole === 'team_admin';
+  const canEditTeam = !!me?.isSuperAdmin || team?.myRole === 'owner';
 
   const { data: invites = [] } = useQuery({
     queryKey: ['invites', teamSlug],
     queryFn: () => api.get<Invite[]>('/teams/' + teamSlug + '/invites'),
     enabled: !!team && canManage,
   });
+  const { data: candidates = [] } = useQuery({
+    queryKey: ['candidates', teamSlug],
+    queryFn: () => api.get<Candidate[]>('/teams/' + teamSlug + '/candidate-users'),
+    enabled: !!team && canManage,
+  });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['team', teamSlug] });
     qc.invalidateQueries({ queryKey: ['invites', teamSlug] });
+    qc.invalidateQueries({ queryKey: ['candidates', teamSlug] });
+    qc.invalidateQueries({ queryKey: ['teams'] });
   };
 
   const inviteMut = useMutation({
@@ -103,10 +117,45 @@ export function TeamAdminPage() {
       api.delete<void>('/teams/' + teamSlug + '/members/' + userId),
     onSuccess: invalidate,
   });
+  const addExistingMut = useMutation({
+    mutationFn: (body: { userId: string; role: Role }) =>
+      api.post<void>('/teams/' + teamSlug + '/members', body),
+    onSuccess: invalidate,
+  });
+  const updateTeamMut = useMutation({
+    mutationFn: (body: { name?: string; slug?: string; icon?: string }) =>
+      api.patch<Team>('/teams/' + teamSlug, body),
+    onSuccess: (next) => {
+      qc.invalidateQueries({ queryKey: ['teams'] });
+      // slug may have changed → navigate to new URL
+      if (next?.slug && next.slug !== teamSlug) {
+        nav('/' + next.slug + '/team', { replace: true });
+      } else {
+        invalidate();
+      }
+    },
+  });
 
   const [email, setEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<Role>('member');
   const [justCreated, setJustCreated] = useState<Invite | null>(null);
+
+  const [pickedUserId, setPickedUserId] = useState('');
+  const [pickedRole, setPickedRole] = useState<Role>('member');
+
+  const [tName, setTName] = useState('');
+  const [tSlug, setTSlug] = useState('');
+  const [tIcon, setTIcon] = useState('');
+  useEffect(() => {
+    if (team) {
+      setTName(team.name);
+      setTSlug(team.slug);
+      setTIcon(team.icon || '');
+    }
+  }, [team]);
+  const teamDirty =
+    !!team &&
+    (tName !== team.name || tSlug !== team.slug || (team.icon || '') !== tIcon);
 
   const membersSorted = useMemo(() => {
     const order: Record<Role, number> = { owner: 0, team_admin: 1, member: 2 };
@@ -152,6 +201,25 @@ export function TeamAdminPage() {
     );
   };
 
+  const submitAddExisting = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pickedUserId) return;
+    addExistingMut.mutate(
+      { userId: pickedUserId, role: pickedRole },
+      {
+        onSuccess: () => {
+          setPickedUserId('');
+          setPickedRole('member');
+        },
+      },
+    );
+  };
+
+  const submitTeamUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateTeamMut.mutate({ name: tName, slug: tSlug, icon: tIcon });
+  };
+
   return (
     <Page>
       <div className={p.pageHead}>
@@ -165,13 +233,108 @@ export function TeamAdminPage() {
         <div className={p.titleRow}>
           <h1 className={p.h1}>Team</h1>
         </div>
-        <p className={p.subtitle}>Manage members, roles, and pending invites.</p>
+        <p className={p.subtitle}>Edit team identity, manage members, and pending invites.</p>
       </div>
 
-      {/* Invite */}
+      {/* Team identity */}
       <section className={s.section}>
         <div className={s.sectionHead}>
-          <div className={s.sectionTitle}>Invite a member</div>
+          <div className={s.sectionTitle}>Team details</div>
+        </div>
+        <form onSubmit={submitTeamUpdate} className={s.detailsForm}>
+          <div className={s.iconField}>
+            <label className={s.fieldLabel}>Icon</label>
+            <input
+              className={s.iconInput}
+              value={tIcon}
+              onChange={(e) => setTIcon(e.target.value.slice(0, 4))}
+              placeholder="🐨"
+              maxLength={4}
+              aria-label="Team icon"
+              disabled={!canEditTeam}
+            />
+          </div>
+          <div className={s.detailsField}>
+            <Input
+              label="Name"
+              value={tName}
+              onChange={(e) => setTName(e.target.value)}
+              required
+              disabled={!canEditTeam}
+            />
+          </div>
+          <div className={s.detailsField}>
+            <Input
+              label="Slug"
+              value={tSlug}
+              onChange={(e) =>
+                setTSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+              }
+              required
+              disabled={!canEditTeam}
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={!canEditTeam || !teamDirty || updateTeamMut.isPending}
+            loading={updateTeamMut.isPending}
+          >
+            Save
+          </Button>
+        </form>
+        {!canEditTeam && (
+          <p className={s.hint}>Only an owner (or super admin) can change team identity.</p>
+        )}
+      </section>
+
+      {/* Add existing user */}
+      {candidates.length > 0 && (
+        <section className={s.section}>
+          <div className={s.sectionHead}>
+            <div className={s.sectionTitle}>Add existing user</div>
+          </div>
+          <form onSubmit={submitAddExisting} className={s.inviteForm}>
+            <div className={s.inviteField}>
+              <label className={s.fieldLabel}>User</label>
+              <select
+                className={s.select}
+                value={pickedUserId}
+                onChange={(e) => setPickedUserId(e.target.value)}
+              >
+                <option value="">Select a user…</option>
+                {candidates.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} · {c.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={s.inviteRole}>
+              <label className={s.fieldLabel}>Role</label>
+              <select
+                className={s.select}
+                value={pickedRole}
+                onChange={(e) => setPickedRole(e.target.value as Role)}
+              >
+                {(me?.isSuperAdmin || team.myRole === 'owner'
+                  ? ROLES
+                  : (['team_admin', 'member'] as Role[])
+                ).map((r) => (
+                  <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                ))}
+              </select>
+            </div>
+            <Button type="submit" loading={addExistingMut.isPending} disabled={!pickedUserId}>
+              Add to team
+            </Button>
+          </form>
+        </section>
+      )}
+
+      {/* Invite by email/key */}
+      <section className={s.section}>
+        <div className={s.sectionHead}>
+          <div className={s.sectionTitle}>Invite a new member</div>
         </div>
 
         <form onSubmit={submitInvite} className={s.inviteForm}>
@@ -301,12 +464,11 @@ export function TeamAdminPage() {
         <div className={s.list}>
           {membersSorted.map((m) => {
             const isSelf = m.user.id === me?.id;
-            // Super admins act as if they were owners for role-assignment UI.
             const effectiveRole: Role = me?.isSuperAdmin ? 'owner' : team.myRole;
             const options = rolesYouCanAssign(effectiveRole, m.role);
             const canEditRole =
               options.length > 1 &&
-              !(isSelf && m.role === 'owner'); // don't let owner demote themselves from UI; backend also prevents last-owner demotion
+              !(isSelf && m.role === 'owner');
             const canRemove =
               !isSelf &&
               (effectiveRole === 'owner' || m.role !== 'owner');

@@ -6,7 +6,13 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTeamDto, InviteMemberDto, TeamRole } from './teams.dto';
+import {
+  AddMemberDto,
+  CreateTeamDto,
+  InviteMemberDto,
+  TeamRole,
+  UpdateTeamDto,
+} from './teams.dto';
 
 // Minimal user shape we need for authorization. Always pass the full
 // authenticated user so we can short-circuit on isSuperAdmin without an
@@ -51,6 +57,55 @@ export class TeamsService {
     if (!team) throw new NotFoundException('Team not found');
     const me = await this.findMembership(team.id, user);
     return { ...team, myRole: (me?.role as TeamRole) ?? null };
+  }
+
+  async update(teamId: string, user: ActorUser, dto: UpdateTeamDto) {
+    // Only owners (or super admin) can edit team identity.
+    const actor = await this.requireManager(teamId, user);
+    if (actor !== 'super' && actor.role !== 'owner') {
+      throw new ForbiddenException('Only an owner can edit team settings');
+    }
+    if (dto.slug) {
+      const conflict = await this.prisma.team.findUnique({ where: { slug: dto.slug } });
+      if (conflict && conflict.id !== teamId) {
+        throw new BadRequestException('Slug already in use');
+      }
+    }
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.slug !== undefined) data.slug = dto.slug;
+    // empty string clears the icon
+    if (dto.icon !== undefined) data.icon = dto.icon || null;
+    return this.prisma.team.update({ where: { id: teamId }, data });
+  }
+
+  /** Users not already in the team — for the "add existing user" picker. */
+  async listCandidateUsers(teamId: string, user: ActorUser) {
+    await this.requireManager(teamId, user);
+    const memberIds = await this.prisma.teamMember.findMany({
+      where: { teamId },
+      select: { userId: true },
+    });
+    const skip = new Set(memberIds.map((m) => m.userId));
+    const all = await this.prisma.user.findMany({
+      orderBy: { name: 'asc' },
+      select: { id: true, email: true, name: true },
+    });
+    return all.filter((u) => !skip.has(u.id));
+  }
+
+  /** Directly add an existing user to a team (no invite flow). */
+  async addExistingMember(teamId: string, user: ActorUser, dto: AddMemberDto) {
+    await this.requireManager(teamId, user);
+    const target = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+    if (!target) throw new NotFoundException('User not found');
+    const existing = await this.prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId: dto.userId } },
+    });
+    if (existing) throw new BadRequestException('User is already a team member');
+    return this.prisma.teamMember.create({
+      data: { teamId, userId: dto.userId, role: dto.role || 'member' },
+    });
   }
 
   async inviteMember(teamId: string, user: ActorUser, dto: InviteMemberDto) {

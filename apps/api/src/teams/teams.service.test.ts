@@ -170,3 +170,118 @@ describe('TeamsService super admin & role rename', () => {
     expect(prisma.teamMember.findUnique).not.toHaveBeenCalled();
   });
 });
+
+describe('TeamsService update', () => {
+  it('owners can edit team identity', async () => {
+    const prisma = {
+      teamMember: { findUnique: vi.fn().mockResolvedValue({ role: 'owner' }) },
+      team: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        update: vi.fn().mockImplementation(({ data }) => Promise.resolve(data)),
+      },
+    };
+    const out = await serviceWith(prisma).update('team-1', member('u'), {
+      name: 'New',
+      icon: '🐨',
+    });
+    expect(out).toEqual({ name: 'New', icon: '🐨' });
+  });
+
+  it('clears the icon when given an empty string', async () => {
+    const prisma = {
+      teamMember: { findUnique: vi.fn().mockResolvedValue({ role: 'owner' }) },
+      team: {
+        update: vi.fn().mockImplementation(({ data }) => Promise.resolve(data)),
+      },
+    };
+    const out = await serviceWith(prisma).update('team-1', member('u'), { icon: '' });
+    expect(out).toEqual({ icon: null });
+  });
+
+  it('refuses team_admin from editing identity', async () => {
+    const prisma = {
+      teamMember: { findUnique: vi.fn().mockResolvedValue({ role: 'team_admin' }) },
+      team: { update: vi.fn() },
+    };
+    await expect(
+      serviceWith(prisma).update('t', member('u'), { name: 'x' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.team.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects slug already in use by another team', async () => {
+    const prisma = {
+      teamMember: { findUnique: vi.fn().mockResolvedValue({ role: 'owner' }) },
+      team: {
+        findUnique: vi.fn().mockResolvedValue({ id: 'other-team', slug: 'taken' }),
+        update: vi.fn(),
+      },
+    };
+    await expect(
+      serviceWith(prisma).update('team-1', member('u'), { slug: 'taken' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.team.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('TeamsService addExistingMember', () => {
+  it('adds an existing user with the given role', async () => {
+    const prisma = {
+      teamMember: {
+        findUnique: vi
+          .fn()
+          // requireManager (actor)
+          .mockResolvedValueOnce({ role: 'team_admin' })
+          // existing target?
+          .mockResolvedValueOnce(null),
+        create: vi.fn().mockResolvedValue({ id: 'm' }),
+      },
+      user: { findUnique: vi.fn().mockResolvedValue({ id: 'target' }) },
+    };
+    await serviceWith(prisma).addExistingMember('team-1', member('actor'), {
+      userId: 'target',
+      role: 'member',
+    });
+    expect(prisma.teamMember.create).toHaveBeenCalledWith({
+      data: { teamId: 'team-1', userId: 'target', role: 'member' },
+    });
+  });
+
+  it('refuses to add a user already on the team', async () => {
+    const prisma = {
+      teamMember: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValueOnce({ role: 'owner' })
+          .mockResolvedValueOnce({ id: 'already' }),
+        create: vi.fn(),
+      },
+      user: { findUnique: vi.fn().mockResolvedValue({ id: 'target' }) },
+    };
+    await expect(
+      serviceWith(prisma).addExistingMember('team-1', member('actor'), {
+        userId: 'target',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.teamMember.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('TeamsService listCandidateUsers', () => {
+  it('omits users already on the team', async () => {
+    const prisma = {
+      teamMember: {
+        findUnique: vi.fn().mockResolvedValue({ role: 'owner' }),
+        findMany: vi.fn().mockResolvedValue([{ userId: 'a' }]),
+      },
+      user: {
+        findMany: vi.fn().mockResolvedValue([
+          { id: 'a', email: 'a@x', name: 'A' },
+          { id: 'b', email: 'b@x', name: 'B' },
+        ]),
+      },
+    };
+    const out = await serviceWith(prisma).listCandidateUsers('team-1', member('u'));
+    expect(out.map((u: any) => u.id)).toEqual(['b']);
+  });
+});

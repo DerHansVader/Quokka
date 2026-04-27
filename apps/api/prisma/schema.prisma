@@ -8,23 +8,26 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(uuid()) @db.Uuid
-  email        String       @unique
-  passwordHash String
-  name         String
+  id            String          @id @default(uuid()) @db.Uuid
+  email         String          @unique
+  passwordHash  String
+  name          String
   // Instance-level super admin: can see and manage every team and user.
   // One Quokka instance is one company; the first user becomes super admin.
-  isSuperAdmin Boolean      @default(false)
-  createdAt    DateTime     @default(now())
-  memberships  TeamMember[]
-  apiKeys      ApiKey[]
-  runs         Run[]
+  isSuperAdmin  Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  memberships   TeamMember[]
+  apiKeys       ApiKey[]
+  runs          Run[]
+  projectAccess ProjectAccess[]
+  projectPins   ProjectPin[]
 }
 
 model Team {
   id       String       @id @default(uuid()) @db.Uuid
   slug     String       @unique
   name     String
+  icon     String?      // single emoji or short string, optional
   members  TeamMember[]
   projects Project[]
 }
@@ -41,15 +44,43 @@ model TeamMember {
 }
 
 model Project {
-  id     String @id @default(uuid()) @db.Uuid
-  teamId String @db.Uuid
-  slug   String
-  name   String
-  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  runs   Run[]
-  views  View[]
+  id         String          @id @default(uuid()) @db.Uuid
+  teamId     String          @db.Uuid
+  slug       String
+  name       String
+  // 'team'    : everyone in the team can see and write
+  // 'private' : only users with an explicit ProjectAccess row
+  visibility String          @default("team")
+  team       Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  runs       Run[]
+  views      View[]
+  access     ProjectAccess[]
+  pins       ProjectPin[]
 
   @@unique([teamId, slug])
+}
+
+// Allowlist for projects with visibility = 'private'.
+model ProjectAccess {
+  id        String  @id @default(uuid()) @db.Uuid
+  projectId String  @db.Uuid
+  userId    String  @db.Uuid
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+// Per-user pinned projects, surfaced at the top of the team dashboard.
+model ProjectPin {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  projectId String   @db.Uuid
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
 }
 
 model ApiKey {

@@ -218,3 +218,36 @@
   opacity: 0.3;
   pointer-events: none;
 }
+
+/* ── Team details ─────────────────────────── */
+.detailsForm {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+  flex-wrap: wrap;
+}
+.detailsField { flex: 1; min-width: 200px; }
+.iconField { width: 64px; flex-shrink: 0; }
+.iconInput {
+  width: 64px;
+  height: 42px;
+  text-align: center;
+  font-size: 22px;
+  line-height: 1;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-radius: var(--r-md);
+  transition: background-color var(--d-fast) var(--ease), box-shadow var(--d-fast) var(--ease);
+}
+.iconInput:hover { background: var(--surface-3); }
+.iconInput:focus { box-shadow: inset 0 0 0 1px var(--accent); }
+.iconInput:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

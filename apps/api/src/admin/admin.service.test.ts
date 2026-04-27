@@ -81,3 +81,112 @@ describe('AdminService', () => {
     await expect(bcrypt.compare('newpassword', stored)).resolves.toBe(true);
   });
 });
+
+describe('AdminService memberships', () => {
+  it('upserts a membership row', async () => {
+    const upsert = vi.fn().mockResolvedValue({ id: 'm' });
+    const prisma = {
+      team: { findUnique: vi.fn().mockResolvedValue({ id: 't' }) },
+      user: { findUnique: vi.fn().mockResolvedValue({ id: 'u' }) },
+      teamMember: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert,
+      },
+    };
+    await svc(prisma).setMembership('u', 't', 'team_admin');
+    expect(upsert.mock.calls[0][0].update).toEqual({ role: 'team_admin' });
+    expect(upsert.mock.calls[0][0].create).toEqual({
+      teamId: 't',
+      userId: 'u',
+      role: 'team_admin',
+    });
+  });
+
+  it('refuses to demote the last owner', async () => {
+    const prisma = {
+      team: { findUnique: vi.fn().mockResolvedValue({ id: 't' }) },
+      user: { findUnique: vi.fn().mockResolvedValue({ id: 'u' }) },
+      teamMember: {
+        findUnique: vi.fn().mockResolvedValue({ role: 'owner' }),
+        count: vi.fn().mockResolvedValue(1),
+        upsert: vi.fn(),
+      },
+    };
+    await expect(svc(prisma).setMembership('u', 't', 'member')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.teamMember.upsert).not.toHaveBeenCalled();
+  });
+
+  it('removes a membership and refuses last-owner removal', async () => {
+    const del = vi.fn().mockResolvedValue({});
+    const prismaOk = {
+      teamMember: {
+        findUnique: vi.fn().mockResolvedValue({ role: 'member' }),
+        delete: del,
+      },
+    };
+    await svc(prismaOk).removeMembership('u', 't');
+    expect(del).toHaveBeenCalled();
+
+    const prismaLast = {
+      teamMember: {
+        findUnique: vi.fn().mockResolvedValue({ role: 'owner' }),
+        count: vi.fn().mockResolvedValue(1),
+        delete: vi.fn(),
+      },
+    };
+    await expect(svc(prismaLast).removeMembership('u', 't')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prismaLast.teamMember.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('AdminService createUser', () => {
+  it('rejects duplicate email', async () => {
+    const prisma = {
+      user: { findUnique: vi.fn().mockResolvedValue({ id: 'existing' }) },
+      $transaction: vi.fn(),
+    };
+    await expect(
+      svc(prisma).createUser({
+        email: 'a@b.c',
+        name: 'A',
+        password: 'longenough',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('creates a user with hashed password and memberships', async () => {
+    const created: any[] = [];
+    const tx = {
+      user: {
+        create: vi.fn().mockImplementation(async ({ data }) => {
+          created.push(data);
+          return { id: 'u', email: data.email, name: data.name, isSuperAdmin: !!data.isSuperAdmin };
+        }),
+      },
+      teamMember: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+    };
+    const prisma = {
+      user: { findUnique: vi.fn().mockResolvedValue(null) },
+      $transaction: vi.fn().mockImplementation(async (fn: any) => fn(tx)),
+    };
+    await svc(prisma).createUser({
+      email: 'a@b.c',
+      name: 'A',
+      password: 'longenough',
+      memberships: [{ teamId: 't1', role: 'team_admin' }],
+    });
+    expect(created[0].passwordHash).toBeTruthy();
+    expect(created[0].passwordHash).not.toEqual('longenough');
+    await expect(bcrypt.compare('longenough', created[0].passwordHash)).resolves.toBe(true);
+    expect(tx.teamMember.create).toHaveBeenCalledWith({
+      data: { userId: 'u', teamId: 't1', role: 'team_admin' },
+    });
+  });
+});
