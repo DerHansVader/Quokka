@@ -12,11 +12,12 @@
   width: 100% !important;
 }
 /* W&B-style drag-to-zoom rectangle. uPlot draws this while the user
- * drags; we just need it to be visible. */
+ * drags; needs to be clearly visible against busy charts. */
 .host :global(.u-select) {
-  background: rgba(0, 122, 255, 0.14);
-  border: 1px solid rgba(0, 122, 255, 0.55);
+  background: rgba(0, 122, 255, 0.32);
+  border: 1.5px solid rgba(0, 122, 255, 0.95);
   border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset;
 }
 .tip {
   position: fixed;
@@ -85,4 +86,63 @@
   justify-content: center;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* Right-click context menu shown when right-clicking inside a chart. */
+.menu {
+  position: fixed;
+  z-index: 1100;
+  min-width: 220px;
+  padding: 4px;
+  background: rgba(28, 28, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--r-md);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  overflow: hidden;
+}
+.menuItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--d-fast) var(--ease);
+}
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+.menuSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.menuLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.menuTitle {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menuMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }

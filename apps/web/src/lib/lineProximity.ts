@@ -3,13 +3,20 @@
  *
  * uPlot exposes only a snapped x-data-index. With sparse data, the visible
  * line at the cursor's actual x is interpolated between the two bracketing
- * points — so to find which line the cursor is *visually* closest to we
+ * samples — so to find which line the cursor is *visually* closest to we
  * need to evaluate each series' line segment that crosses the cursor's x.
  */
 
-/** Find the y at the line position for `cursorX`, by linearly interpolating
- *  between the two valid samples that bracket the cursor.
- *  Returns `null` if the series has no usable samples near the cursor.
+const isFiniteNum = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isFinite(v);
+
+/** Find the y of `series` at `cursorX` by linearly interpolating between
+ *  the nearest valid samples on each side of the cursor.
+ *
+ *  Returns `null` when the cursor is outside the run's data range — i.e.
+ *  there is no line segment crossing `cursorX` to be near. This matters
+ *  for sparse runs that end before / start after the cursor: a snapped
+ *  endpoint should NOT win the closeness contest there.
  */
 export function lineYAt(
   ys: ArrayLike<number | null | undefined>,
@@ -20,36 +27,28 @@ export function lineYAt(
   const n = xs.length;
   if (n === 0) return null;
 
-  const isFinite = (v: unknown): v is number =>
-    typeof v === 'number' && Number.isFinite(v);
-
-  // Anchor: if the hint is on a valid sample use it, otherwise find the
-  // nearest valid sample by x.
-  let anchor = hint;
-  if (!isFinite(ys[anchor])) {
-    let best = -1;
-    let bestD = Infinity;
-    for (let k = 0; k < n; k++) {
-      if (!isFinite(ys[k])) continue;
-      const d = Math.abs(xs[k] - cursorX);
-      if (d < bestD) { bestD = d; best = k; }
-    }
-    if (best < 0) return null;
-    anchor = best;
+  // Walk left from `hint` for the largest valid index with x <= cursorX.
+  let lo = -1;
+  for (let k = Math.min(hint, n - 1); k >= 0; k--) {
+    if (xs[k] <= cursorX && isFiniteNum(ys[k])) { lo = k; break; }
+  }
+  // Walk right for the smallest valid index with x >= cursorX.
+  let hi = -1;
+  for (let k = Math.max(hint, 0); k < n; k++) {
+    if (xs[k] >= cursorX && isFiniteNum(ys[k])) { hi = k; break; }
   }
 
-  const x0 = xs[anchor];
-  const y0 = ys[anchor] as number;
+  // Cursor on an exact valid sample.
+  if (lo === hi && lo !== -1) return ys[lo] as number;
 
-  // Walk in the direction of the cursor for the second valid sample.
-  const dir = cursorX >= x0 ? 1 : -1;
-  let x1: number | null = null;
-  let y1: number | null = null;
-  for (let k = anchor + dir; k >= 0 && k < n; k += dir) {
-    if (isFinite(ys[k])) { x1 = xs[k]; y1 = ys[k] as number; break; }
-  }
+  // Cursor is outside the run's data range — no line to compare against.
+  if (lo === -1 || hi === -1) return null;
 
-  if (x1 == null || y1 == null || x1 === x0) return y0;
+  const x0 = xs[lo];
+  const x1 = xs[hi];
+  const y0 = ys[lo] as number;
+  const y1 = ys[hi] as number;
+  if (x1 === x0) return y0;
 
   const t = (cursorX - x0) / (x1 - x0);
   return y0 + t * (y1 - y0);

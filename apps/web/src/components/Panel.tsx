@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
@@ -67,6 +67,16 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
   const setHoveredRun = useHoverStore((s) => s.setRunId);
   const hoveredRunId = useHoverStore((s) => s.runId);
   const openSamplePeek = useSamplePeekStore((s) => s.open);
+
+  /** Right-click context menu state. */
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    runId: string;
+    runLabel: string;
+    runColor: string;
+    step: number;
+  } | null>(null);
 
   // (re)build the plot when data or visual config changes.
   // NOTE: We deliberately exclude `runs[i].visible` from this dependency: it's
@@ -378,9 +388,9 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
     return () => host.removeEventListener('mouseleave', onLeave);
   }, [setHoveredRun]);
 
-  // Right-click on the chart → open the sample for the closest run at the
-  // cursor's step. Step is read from the closest run's nearest sampled x
-  // (so it always lands on a real recorded step value).
+  // Right-click on the chart → show a small context menu offering to open
+  // the sample for the closest run at the cursor's step. Step snaps to that
+  // run's nearest recorded x value.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -389,10 +399,10 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
       const closest = closestRef.current;
       if (!u || closest < 0) return;
       const run = runsRef.current[closest];
-      if (!run) return;
+      if (!run || run.points.length === 0) return;
 
       const cursorX = u.posToVal(u.cursor.left ?? 0, 'x');
-      let step = run.points[0]?.x ?? 0;
+      let step = run.points[0].x;
       let bestD = Infinity;
       for (const p of run.points) {
         const d = Math.abs(p.x - cursorX);
@@ -400,17 +410,33 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
       }
 
       e.preventDefault();
-      openSamplePeek({
+      setMenu({
+        x: e.clientX,
+        y: e.clientY,
         runId: run.runId,
         runLabel: run.label,
         runColor: run.color,
         step: Math.round(step),
-        anchor: { x: e.clientX, y: e.clientY },
       });
     };
     host.addEventListener('contextmenu', onContextMenu);
     return () => host.removeEventListener('contextmenu', onContextMenu);
-  }, [openSamplePeek]);
+  }, []);
+
+  // Dismiss the context menu on any outside click or Escape.
+  useEffect(() => {
+    if (!menu) return;
+    const onDown = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenu(null);
+    };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menu]);
 
   return (
     <div
@@ -424,6 +450,42 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
         <>
           <div ref={hostRef} className={s.host} />
           {createPortal(<div ref={tipRef} className={s.tip} />, document.body)}
+          {menu &&
+            createPortal(
+              <div
+                className={s.menu}
+                style={{
+                  left: Math.min(menu.x, window.innerWidth - 240),
+                  top: Math.min(menu.y, window.innerHeight - 60),
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <button
+                  className={s.menuItem}
+                  onClick={() => {
+                    openSamplePeek({
+                      runId: menu.runId,
+                      runLabel: menu.runLabel,
+                      runColor: menu.runColor,
+                      step: menu.step,
+                      anchor: { x: menu.x, y: menu.y },
+                    });
+                    setMenu(null);
+                  }}
+                >
+                  <span
+                    className={s.menuSwatch}
+                    style={{ background: menu.runColor }}
+                  />
+                  <span className={s.menuLabel}>
+                    <span className={s.menuTitle}>Show sample at step {menu.step}</span>
+                    <span className={s.menuMeta}>{menu.runLabel}</span>
+                  </span>
+                </button>
+              </div>,
+              document.body,
+            )}
         </>
       )}
     </div>

@@ -21,10 +21,18 @@ describe('lineYAt', () => {
     expect(lineYAt(ys, xs, 15, 0)).toBeCloseTo(15, 6);
   });
 
-  it('returns the anchor when there is no second valid sample', () => {
-    const xs = [0];
-    const ys = [42];
-    expect(lineYAt(ys, xs, 99, 0)).toBe(42);
+  it('returns null when the cursor is outside the run data range', () => {
+    const xs = [0, 10, 20];
+    const ys = [0, 10, 20];
+    // Beyond the rightmost sample — no line is drawn there.
+    expect(lineYAt(ys, xs, 99, 2)).toBeNull();
+    // Before the leftmost sample — no line either.
+    expect(lineYAt(ys, xs, -5, 0)).toBeNull();
+  });
+
+  it('returns null when the series has only one sample (no line, only a point)', () => {
+    expect(lineYAt([42], [0], 0, 0)).toBe(42);
+    expect(lineYAt([42], [0], 99, 0)).toBeNull();
   });
 
   it('returns null when the series has no finite samples', () => {
@@ -36,6 +44,15 @@ describe('lineYAt', () => {
   it('walks left when the cursor is to the left of the hint', () => {
     const xs = [0, 10, 20];
     const ys = [0, 10, 20];
-    expect(lineYAt(ys, xs, 5, 1)).toBe(5);
+    expect(lineYAt(ys, xs, 5, 2)).toBe(5);
+  });
+
+  it('bridges sparse runs across many union x positions', () => {
+    // Run only has samples at x=0 and x=1000; union has many in between.
+    const xs = [0, 250, 500, 750, 1000];
+    const ys = [0, null, null, null, 1000];
+    expect(lineYAt(ys, xs, 250, 1)).toBeCloseTo(250, 6);
+    expect(lineYAt(ys, xs, 500, 2)).toBeCloseTo(500, 6);
+    expect(lineYAt(ys, xs, 750, 3)).toBeCloseTo(750, 6);
   });
 });
