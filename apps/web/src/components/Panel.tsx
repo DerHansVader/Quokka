@@ -176,6 +176,27 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
         drag: { x: true, y: true, setScale: false, uni: 10 },
         sync: { key: SYNC_KEY },
         points: { size: 5 },
+        // When the chart is rendered inside a CSS-scaled ancestor (Canvas
+        // mode applies `transform: scale(zoom)`), `getBoundingClientRect`
+        // returns the visually-scaled width, so uPlot's `clientX - rect.left`
+        // is over-scaled by exactly that factor. The mismatch is 0 at the
+        // top-left and grows toward the bottom-right. Undo it here so all
+        // cursor-derived features (tooltip, drag-zoom rect, right-click)
+        // line up with the actual mouse position.
+        move: (u, left, top) => {
+          const over = u.over;
+          if (!over) return [left, top];
+          const rect = over.getBoundingClientRect();
+          const cw = over.clientWidth;
+          const ch = over.clientHeight;
+          if (!cw || !ch) return [left, top];
+          const sx = rect.width / cw;
+          const sy = rect.height / ch;
+          if (Math.abs(sx - 1) < 0.001 && Math.abs(sy - 1) < 0.001) {
+            return [left, top];
+          }
+          return [left / sx, top / sy];
+        },
       },
       scales: {
         x: {
