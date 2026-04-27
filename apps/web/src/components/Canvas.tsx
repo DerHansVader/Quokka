@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { PanelConfig } from '@quokka/shared';
+import type { GroupConfig, PanelConfig } from '@quokka/shared';
 import { Panel, type RunSeriesEntry } from './Panel';
 import s from './Canvas.module.css';
 
@@ -24,8 +24,12 @@ interface Props {
   onPanelChange: (index: number, c: PanelConfig) => void;
   onPanelAdd: (key: string, at: { x: number; y: number }) => void;
   onPanelRemove: (id: string) => void;
+  onPanelsRemove: (ids: string[]) => void;
   onOpenSettings: (index: number) => void;
   editingIndex: number | null;
+  groups: GroupConfig[];
+  onAddGroup: (panelIds: string[], name: string) => void;
+  onRemoveGroup: (id: string) => void;
 }
 
 type Drag =
@@ -36,10 +40,12 @@ type Drag =
 
 interface CtxMenu {
   x: number; y: number;
-  kind: 'bg' | 'panel';
+  kind: 'bg' | 'panel' | 'multi';
   panelId?: string;
   worldX?: number;  // for bg menu: where to place new panels
   worldY?: number;
+  /** Selected panel ids when kind === 'multi'. */
+  selectedIds?: string[];
 }
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
@@ -47,7 +53,9 @@ const snap = (n: number) => Math.round(n);
 
 export function Canvas({
   panels, runsForPanel, availableKeys, viewport, onViewportChange,
-  onPanelChange, onPanelAdd, onPanelRemove, onOpenSettings, editingIndex,
+  onPanelChange, onPanelAdd, onPanelRemove, onPanelsRemove,
+  onOpenSettings, editingIndex,
+  groups, onAddGroup, onRemoveGroup,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -166,7 +174,6 @@ export function Canvas({
     const el = rootRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const lp = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -182,9 +189,13 @@ export function Canvas({
     return () => el.removeEventListener('wheel', onWheel);
   }, [vp, onViewportChange]);
 
-  // Middle-click pans from anywhere; left-click on empty bg starts marquee.
+  // Middle-click — or Cmd/Ctrl + left-click — pans from anywhere.
+  // Plain left-click on empty bg starts marquee selection.
+  const isPanGesture = (e: { button: number; metaKey: boolean; ctrlKey: boolean }) =>
+    e.button === 1 || (e.button === 0 && (e.metaKey || e.ctrlKey));
+
   const onRootDown = (e: React.MouseEvent) => {
-    if (e.button === 1) {
+    if (isPanGesture(e)) {
       e.preventDefault();
       setCtx(null);
       setDrag({ kind: 'pan', sx: e.clientX, sy: e.clientY, vx0: vp.x, vy0: vp.y });
@@ -193,6 +204,7 @@ export function Canvas({
   const onBgDown = (e: React.MouseEvent) => {
     const t = e.target as HTMLElement;
     if (t !== e.currentTarget && !t.classList.contains(s.bg)) return;
+    if (isPanGesture(e)) return;  // root will pan
     setCtx(null);
     if (e.button === 0) {
       const lp = localPoint(e);
@@ -211,6 +223,7 @@ export function Canvas({
 
   const startMove = (e: React.MouseEvent, p: PanelConfig) => {
     if (e.button !== 0 || !p.id) return;
+    if (e.metaKey || e.ctrlKey) return;  // root will pan
     e.stopPropagation();
     setCtx(null);
     setDrag({
@@ -223,6 +236,7 @@ export function Canvas({
 
   const startResize = (e: React.MouseEvent, p: PanelConfig) => {
     if (e.button !== 0 || !p.id) return;
+    if (e.metaKey || e.ctrlKey) return;
     e.stopPropagation();
     setCtx(null);
     setDrag({
@@ -237,7 +251,14 @@ export function Canvas({
     e.preventDefault();
     e.stopPropagation();
     const lp = localPoint(e);
-    setCtx({ x: lp.x, y: lp.y, kind: 'panel', panelId: p.id });
+    // Right-click on a member of a multi-selection → multi menu.
+    // Right-click on a non-selected panel → switch selection to just that one.
+    if (p.id && selected.has(p.id) && selected.size > 1) {
+      setCtx({ x: lp.x, y: lp.y, kind: 'multi', selectedIds: [...selected] });
+    } else {
+      if (p.id) setSelected(new Set([p.id]));
+      setCtx({ x: lp.x, y: lp.y, kind: 'panel', panelId: p.id });
+    }
   };
 
   // ── viewport helpers ─────────────────────────────────────────
@@ -280,6 +301,43 @@ export function Canvas({
     const cy = ((p.y ?? 0) + (p.h ?? MIN_H) / 2) * CELL;
     setViewport({ x: rect.width / 2 - cx, y: rect.height / 2 - cy, zoom: 1 });
     if (p.id) setSelected(new Set([p.id]));
+  };
+
+  /** Bounding box of a set of panel ids in world (px) coords. Null if empty. */
+  const bbox = (ids: string[]) => {
+    const ps = panels.filter((p) => p.id && ids.includes(p.id));
+    if (!ps.length) return null;
+    let lx = Infinity, ly = Infinity, hx = -Infinity, hy = -Infinity;
+    for (const p of ps) {
+      const x = (p.x ?? 0) * CELL, y = (p.y ?? 0) * CELL;
+      const w = (p.w ?? MIN_W) * CELL, h = (p.h ?? MIN_H) * CELL;
+      lx = Math.min(lx, x); ly = Math.min(ly, y);
+      hx = Math.max(hx, x + w); hy = Math.max(hy, y + h);
+    }
+    return { lx, ly, hx, hy };
+  };
+
+  const centerOnSelection = () => {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const b = bbox([...selected]);
+    if (!b) return;
+    const cx = (b.lx + b.hx) / 2;
+    const cy = (b.ly + b.hy) / 2;
+    setViewport({ x: rect.width / 2 - cx, y: rect.height / 2 - cy, zoom: 1 });
+  };
+
+  const groupSelected = () => {
+    const ids = [...selected];
+    if (ids.length < 2) return;
+    const name = window.prompt('Name this group', `Group ${groups.length + 1}`);
+    if (name == null) return;
+    onAddGroup(ids, name.trim() || `Group ${groups.length + 1}`);
+  };
+
+  const removeSelected = () => {
+    onPanelsRemove([...selected]);
+    setSelected(new Set());
   };
 
   const addAtCenter = (key: string) => {
@@ -362,6 +420,36 @@ export function Canvas({
             transformOrigin: '0 0',
           }}
         >
+          {/* Group bounding rectangles render behind the panels. */}
+          {groups.map((g) => {
+            const b = bbox(g.panelIds);
+            if (!b) return null;
+            const PAD = 12;
+            return (
+              <div
+                key={g.id}
+                className={s.group}
+                style={{
+                  left: b.lx - PAD,
+                  top: b.ly - PAD,
+                  width: b.hx - b.lx + PAD * 2,
+                  height: b.hy - b.ly + PAD * 2,
+                }}
+              >
+                <div className={s.groupLabel}>
+                  <span>{g.name}</span>
+                  <button
+                    className={s.groupClose}
+                    onClick={() => onRemoveGroup(g.id)}
+                    title="Ungroup"
+                  >
+                    <Cross />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
           {ghost && (
             <div
               className={s.ghost}
@@ -458,6 +546,14 @@ export function Canvas({
                   onFitAll: fitAll,
                   onFind: focusPanel,
                   panels,
+                })
+              : ctx.kind === 'multi'
+              ? multiItems({
+                  count: ctx.selectedIds!.length,
+                  onGroup: groupSelected,
+                  onCenter: centerOnSelection,
+                  onClear: () => setSelected(new Set()),
+                  onRemove: removeSelected,
                 })
               : panelItems({
                   panels, panelId: ctx.panelId!,
@@ -626,6 +722,26 @@ function panelItems({
     { kind: 'item', label: 'Configure',  onClick: () => onConfigure(i), disabled: i < 0 },
     { kind: 'sep' },
     { kind: 'item', label: 'Remove', danger: true, onClick: () => onRemove(panelId) },
+  ];
+}
+
+function multiItems({
+  count, onGroup, onCenter, onClear, onRemove,
+}: {
+  count: number;
+  onGroup: () => void;
+  onCenter: () => void;
+  onClear: () => void;
+  onRemove: () => void;
+}): Item[] {
+  return [
+    { kind: 'item', label: `${count} panels selected`, onClick: () => {}, disabled: true },
+    { kind: 'sep' },
+    { kind: 'item', label: 'Group together…',     onClick: onGroup },
+    { kind: 'item', label: 'Center on selection', onClick: onCenter },
+    { kind: 'item', label: 'Clear selection',     onClick: onClear },
+    { kind: 'sep' },
+    { kind: 'item', label: `Remove ${count} panels`, danger: true, onClick: onRemove },
   ];
 }
 

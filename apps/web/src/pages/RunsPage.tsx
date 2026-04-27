@@ -57,7 +57,9 @@ export function RunsPage() {
 
   const {
     mode, setMode, panels, updatePanel,
-    addCanvasPanel, removeCanvasPanel, viewport, setViewport,
+    addCanvasPanel, removeCanvasPanel, removeCanvasPanels,
+    groups, addGroup, removeGroup,
+    viewport, setViewport,
   } = usePersistedPanels('project', project?.id, allKeys);
 
   const { data: compareData } = useQuery({
@@ -169,8 +171,12 @@ export function RunsPage() {
                 onPanelChange={updatePanel}
                 onPanelAdd={addCanvasPanel}
                 onPanelRemove={removeCanvasPanel}
+                onPanelsRemove={removeCanvasPanels}
                 editingIndex={editingIndex}
                 onOpenSettings={(i) => setEditingIndex(i === editingIndex ? null : i)}
+                groups={groups}
+                onAddGroup={addGroup}
+                onRemoveGroup={removeGroup}
               />
             ) : (
               <PanelGrid

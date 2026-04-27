@@ -52,7 +52,9 @@ export function RunViewerPage() {
 
   const {
     mode, setMode, panels, updatePanel,
-    addCanvasPanel, removeCanvasPanel, viewport, setViewport,
+    addCanvasPanel, removeCanvasPanel, removeCanvasPanels,
+    groups, addGroup, removeGroup,
+    viewport, setViewport,
   } = usePersistedPanels('run', runId, keys);
 
   const { data: seriesData } = useQuery({
@@ -190,8 +192,12 @@ export function RunViewerPage() {
                 onPanelChange={updatePanel}
                 onPanelAdd={addCanvasPanel}
                 onPanelRemove={removeCanvasPanel}
+                onPanelsRemove={removeCanvasPanels}
                 editingIndex={editingIndex}
                 onOpenSettings={(i) => setEditingIndex(i === editingIndex ? null : i)}
+                groups={groups}
+                onAddGroup={addGroup}
+                onRemoveGroup={removeGroup}
               />
             ) : (
               <PanelGrid

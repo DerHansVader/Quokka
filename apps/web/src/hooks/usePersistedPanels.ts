@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PanelConfig, ViewLayout, ViewMode } from '@quokka/shared';
+import type {
+  GroupConfig, PanelConfig, ViewLayout, ViewMode,
+} from '@quokka/shared';
 import { api } from '../lib/api';
 
 interface View {
@@ -34,7 +36,7 @@ function normalize(raw: any): ViewLayout {
     return {
       mode: 'grid',
       grid: raw,
-      canvas: { panels: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      canvas: { panels: [], groups: [], viewport: { x: 0, y: 0, zoom: 1 } },
     };
   }
   const canvasPanels: PanelConfig[] = Array.isArray(raw?.canvas?.panels)
@@ -45,6 +47,7 @@ function normalize(raw: any): ViewLayout {
     grid: Array.isArray(raw?.grid) ? raw.grid : [],
     canvas: {
       panels: canvasPanels,
+      groups: Array.isArray(raw?.canvas?.groups) ? raw.canvas.groups : [],
       viewport: raw?.canvas?.viewport ?? { x: 0, y: 0, zoom: 1 },
     },
   };
@@ -114,12 +117,47 @@ export function usePersistedPanels(
     });
   };
 
-  const removeCanvasPanel = (id: string) => {
+  const removeCanvasPanels = (ids: string[]) => {
+    const idSet = new Set(ids);
     persist({
       ...layout,
       canvas: {
         ...layout.canvas,
-        panels: layout.canvas.panels.filter((p) => p.id !== id),
+        panels: layout.canvas.panels.filter((p) => !p.id || !idSet.has(p.id)),
+        // Drop the panels from any groups; remove now-empty groups too.
+        groups: layout.canvas.groups
+          .map((g) => ({ ...g, panelIds: g.panelIds.filter((id) => !idSet.has(id)) }))
+          .filter((g) => g.panelIds.length > 0),
+      },
+    });
+  };
+  const removeCanvasPanel = (id: string) => removeCanvasPanels([id]);
+
+  const addGroup = (panelIds: string[], name: string) => {
+    if (panelIds.length < 2) return;
+    const idSet = new Set(panelIds);
+    const next: GroupConfig = { id: newId(), name, panelIds };
+    persist({
+      ...layout,
+      canvas: {
+        ...layout.canvas,
+        // Panels can only live in one group at a time — strip them from others.
+        groups: [
+          ...layout.canvas.groups
+            .map((g) => ({ ...g, panelIds: g.panelIds.filter((id) => !idSet.has(id)) }))
+            .filter((g) => g.panelIds.length > 0),
+          next,
+        ],
+      },
+    });
+  };
+
+  const removeGroup = (id: string) => {
+    persist({
+      ...layout,
+      canvas: {
+        ...layout.canvas,
+        groups: layout.canvas.groups.filter((g) => g.id !== id),
       },
     });
   };
@@ -135,6 +173,10 @@ export function usePersistedPanels(
     updatePanel,
     addCanvasPanel,
     removeCanvasPanel,
+    removeCanvasPanels,
+    groups: layout.canvas.groups,
+    addGroup,
+    removeGroup,
     viewport: layout.canvas.viewport,
     setViewport,
     isLoading: !view,

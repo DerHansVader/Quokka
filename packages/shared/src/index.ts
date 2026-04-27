@@ -47,6 +47,12 @@ export interface PanelConfig {
 
 export type ViewMode = 'grid' | 'canvas';
 
+export interface GroupConfig {
+  id: string;
+  name: string;
+  panelIds: string[];
+}
+
 /** Stored in `View.layout`. Older arrays-of-PanelConfig are auto-migrated. */
 export interface ViewLayout {
   mode: ViewMode;
@@ -55,6 +61,7 @@ export interface ViewLayout {
   /** Canvas: user-curated panels with free position + size. */
   canvas: {
     panels: PanelConfig[];
+    groups: GroupConfig[];
     viewport: { x: number; y: number; zoom: number };
   };
 }
