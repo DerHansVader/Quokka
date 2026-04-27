@@ -1,4 +1,4 @@
-# Quokka
+Quokka - an experiment tracker
 
 A self-hosted experiment tracker for AI training runs. The essence of wandb, nothing more.
 
