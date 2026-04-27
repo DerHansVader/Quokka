@@ -11,6 +11,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TeamAdminPage } from './pages/TeamAdminPage';
 import { AdminPage } from './pages/AdminPage';
 import { DocsPage } from './pages/DocsPage';
+import { SamplePeek } from './components/SamplePeek';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
@@ -33,6 +34,7 @@ export function App() {
         <Route path="/:teamSlug/:projectSlug" element={<Protected><RunsPage /></Protected>} />
         <Route path="/:teamSlug/:projectSlug/runs/:runId" element={<Protected><RunViewerPage /></Protected>} />
       </Routes>
+      <SamplePeek />
     </Layout>
   );
 }

@@ -6,7 +6,9 @@ import type { PanelConfig } from '@quokka/shared';
 import { smooth, excludeOutliers, isWindowType } from '../lib/smoothing';
 import { alignRunValues, plotValues } from './panelData';
 import { buildRange } from '../lib/panelRange';
+import { lineYAt } from '../lib/lineProximity';
 import { useHoverStore } from '../stores/hover';
+import { useSamplePeekStore } from '../stores/samplePeek';
 import s from './Panel.module.css';
 
 const SYNC_KEY = 'wt-panels';
@@ -64,6 +66,7 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
 
   const setHoveredRun = useHoverStore((s) => s.setRunId);
   const hoveredRunId = useHoverStore((s) => s.runId);
+  const openSamplePeek = useSamplePeekStore((s) => s.open);
 
   // (re)build the plot when data or visual config changes.
   // NOTE: We deliberately exclude `runs[i].visible` from this dependency: it's
@@ -191,14 +194,22 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
               return;
             }
 
-            // Find which series is closest (in pixels) to the cursor's y.
+            // Find which *line* is closest to the cursor by interpolating
+            // each series at the cursor's x and comparing pixel distance —
+            // the snapped data-point alone is misleading on sparse traces.
+            const cursorX = u.posToVal(u.cursor.left ?? 0, 'x');
+            const xs = u.data[0] as unknown as number[];
             let closest = -1;
             let best = Infinity;
             for (let i = 0; i < runsRef.current.length; i++) {
               if (runsRef.current[i].visible === false) continue;
-              const v = u.data[smoothedStart + i]?.[idx!];
-              if (v == null || !Number.isFinite(v as number)) continue;
-              const py = u.valToPos(v as number, 'y');
+              const ys = u.data[smoothedStart + i] as unknown as
+                | ArrayLike<number | null | undefined>
+                | undefined;
+              if (!ys) continue;
+              const yLine = lineYAt(ys, xs, cursorX, idx!);
+              if (yLine == null || !Number.isFinite(yLine)) continue;
+              const py = u.valToPos(yLine, 'y');
               const d = Math.abs(py - cy);
               if (d < best) { best = d; closest = i; }
             }
@@ -341,6 +352,40 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
     host.addEventListener('mouseleave', onLeave);
     return () => host.removeEventListener('mouseleave', onLeave);
   }, [setHoveredRun]);
+
+  // Right-click on the chart → open the sample for the closest run at the
+  // cursor's step. Step is read from the closest run's nearest sampled x
+  // (so it always lands on a real recorded step value).
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const onContextMenu = (e: MouseEvent) => {
+      const u = plotRef.current;
+      const closest = closestRef.current;
+      if (!u || closest < 0) return;
+      const run = runsRef.current[closest];
+      if (!run) return;
+
+      const cursorX = u.posToVal(u.cursor.left ?? 0, 'x');
+      let step = run.points[0]?.x ?? 0;
+      let bestD = Infinity;
+      for (const p of run.points) {
+        const d = Math.abs(p.x - cursorX);
+        if (d < bestD) { bestD = d; step = p.x; }
+      }
+
+      e.preventDefault();
+      openSamplePeek({
+        runId: run.runId,
+        runLabel: run.label,
+        runColor: run.color,
+        step: Math.round(step),
+        anchor: { x: e.clientX, y: e.clientY },
+      });
+    };
+    host.addEventListener('contextmenu', onContextMenu);
+    return () => host.removeEventListener('contextmenu', onContextMenu);
+  }, [openSamplePeek]);
 
   return (
     <div
