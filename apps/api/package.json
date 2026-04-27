@@ -8,17 +8,21 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main",
+    "test": "vitest run src",
+    "test:watch": "vitest src",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "db:dev": "prisma migrate dev"
+    "db:dev": "prisma migrate dev",
+    "db:push": "node -e \"throw new Error('Do not use prisma db push: it can drop the unmanaged metric hypertable. Use prisma migrate deploy.')\""
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
     "@prisma/client": "^6.0.0",
+    "@quokka/shared": "workspace:*",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
@@ -26,8 +30,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
-    "@quokka/shared": "workspace:*"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
@@ -37,6 +40,7 @@
     "@types/node": "^22.0.0",
     "@types/passport-jwt": "^4.0.1",
     "prisma": "^6.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.4"
   }
 }

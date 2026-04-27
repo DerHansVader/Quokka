@@ -45,14 +45,16 @@ examples/           Training-run simulators for demos
 You need a host with Docker and a domain pointing at it.
 
 ```bash
-git clone https://github.com/quokka-ml/quokka.git
+git clone https://github.com/DerHansVader/Quokka.git
 cd quokka/deploy
 cp .env.example .env
 # edit .env — set DOMAIN, POSTGRES_PASSWORD, JWT_SECRET
 docker compose up -d
 ```
 
-Caddy provisions TLS automatically. The first signup becomes the owner of the default team; everyone else joins via invite links from the team admin page.
+Caddy provisions TLS automatically. The first signup becomes the owner of the default team; everyone else joins by pasting an invite key from the team admin page.
+
+Quokka stores metrics in a hand-written TimescaleDB hypertable. Do **not** run `prisma db push` against a Quokka database; it can drop the unmanaged `metric` table. Use `pnpm --filter @quokka/api db:migrate` / `prisma migrate deploy` only.
 
 ## Local development
 
@@ -72,6 +74,8 @@ pnpm dev
 pnpm test            # vitest for the web app
 pnpm build           # production build of api + web
 ```
+
+If you put another nginx or proxy in front of Quokka, make sure it serves Vite assets with correct MIME types. The included nginx config explicitly loads `/etc/nginx/mime.types`; missing MIME types can cause browsers to reject cached JS modules.
 
 ## Use the SDK
 

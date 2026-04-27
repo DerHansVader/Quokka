@@ -51,7 +51,12 @@ export class IngestService {
 
     await this.prisma.run.update({
       where: { id: runId },
-      data: { heartbeatAt: new Date() },
+      data: {
+        heartbeatAt: new Date(),
+        ...(run.status === 'crashed' && !run.finishedAt
+          ? { status: 'running' }
+          : {}),
+      },
     });
 
     const event = {
@@ -69,9 +74,19 @@ export class IngestService {
   }
 
   async heartbeat(runId: string) {
+    const run = await this.prisma.run.findUnique({
+      where: { id: runId },
+      select: { status: true, finishedAt: true },
+    });
+    if (!run) return;
     await this.prisma.run.update({
       where: { id: runId },
-      data: { heartbeatAt: new Date() },
+      data: {
+        heartbeatAt: new Date(),
+        ...(run.status === 'crashed' && !run.finishedAt
+          ? { status: 'running' }
+          : {}),
+      },
     });
   }
 

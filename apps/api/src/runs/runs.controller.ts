@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { CombinedAuthGuard } from '../auth/combined-auth.guard';
 import { RunsService } from './runs.service';
 
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(CombinedAuthGuard)
 @Controller()
 export class RunsController {
   constructor(private runsService: RunsService) {}

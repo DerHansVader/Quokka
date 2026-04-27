@@ -123,6 +123,7 @@
   justify-content: center;
   padding: 96px 24px;
 }
+.emptyCompact { padding: 48px 24px; }
 .emptyIcon {
   width: 52px;
   height: 52px;

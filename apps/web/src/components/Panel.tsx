@@ -3,6 +3,7 @@ import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import type { PanelConfig } from '@quokka/shared';
 import { smooth, excludeOutliers, isWindowType } from '../lib/smoothing';
+import { alignRunValues, plotValues } from './panelData';
 import s from './Panel.module.css';
 
 const SYNC_KEY = 'wt-panels';
@@ -59,8 +60,7 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
     const drawRaw = smoothingOn && config.showRaw !== false;
 
     const rawByRun = runs.map((r) => {
-      const map = new Map(r.points.map((p) => [p.x, p.y]));
-      let values = xs.map((x) => map.get(x) ?? NaN);
+      let values = alignRunValues(xs, r.points);
       if (config.outlier.pct > 0) values = excludeOutliers(values, config.outlier.pct).filtered;
       return values;
     });
@@ -71,8 +71,8 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
 
     const data: uPlot.AlignedData = [
       new Float64Array(xs),
-      ...(drawRaw ? rawByRun.map((v) => new Float64Array(v)) : []),
-      ...smoothedByRun.map((v) => new Float64Array(v)),
+      ...(drawRaw ? rawByRun.map(plotValues) : []),
+      ...smoothedByRun.map(plotValues),
     ];
 
     const rawSeries = drawRaw
@@ -80,6 +80,7 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
           label: r.label + ' (raw)',
           stroke: withAlpha(r.color, 0.14),
           width: 0.75,
+          spanGaps: true,
           points: { show: false },
         }))
       : [];
@@ -88,6 +89,7 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT }: PanelProps) {
       label: r.label,
       stroke: r.color,
       width: 1.75,
+      spanGaps: true,
       points: { show: false },
     }));
 

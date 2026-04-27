@@ -3,6 +3,7 @@ import atexit
 import json
 import os
 import queue
+import sys
 import threading
 import time
 from pathlib import Path
@@ -88,6 +89,7 @@ class Run:
         self._stop = threading.Event()
         self._session = requests.Session()
         self._session.headers["Authorization"] = f"Bearer {api_key}"
+        self._last_warning_at = 0.0
 
     def start(self):
         project_id = self._resolve_project(self.project)
@@ -125,10 +127,12 @@ class Run:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=10)
         self._flush()
+        self._drain_spool_once()
         try:
-            self._session.post(f"{self.base_url}/api/runs/{self.run_id}/finish", json={})
-        except Exception:
-            pass
+            resp = self._session.post(f"{self.base_url}/api/runs/{self.run_id}/finish", json={})
+            resp.raise_for_status()
+        except Exception as exc:
+            self._warn(f"finish failed: {exc}")
 
     def _resolve_project(self, project: str) -> str:
         """Project is a name/slug (auto-created) or 'team/project' to pin a team."""
@@ -143,9 +147,10 @@ class Run:
     def _drain_loop(self):
         while not self._stop.is_set():
             self._stop.wait(BATCH_INTERVAL_MS / 1000)
-            self._flush()
+            if self._flush():
+                self._drain_spool_once()
 
-    def _flush(self):
+    def _flush(self) -> bool:
         batch = []
         try:
             while True:
@@ -154,17 +159,25 @@ class Run:
             pass
 
         if not batch:
-            return
+            return True
 
+        ok = True
         for i in range(0, len(batch), BATCH_SIZE):
             chunk = batch[i : i + BATCH_SIZE]
             try:
-                self._session.post(
-                    f"{self.base_url}/api/runs/{self.run_id}/log",
-                    json={"points": chunk},
-                )
-            except Exception:
+                self._send_points(chunk)
+            except Exception as exc:
+                ok = False
                 self._spool(chunk)
+                self._warn(f"log upload failed; spooled {len(chunk)} points: {exc}")
+        return ok
+
+    def _send_points(self, points: list[dict]):
+        resp = self._session.post(
+            f"{self.base_url}/api/runs/{self.run_id}/log",
+            json={"points": points},
+        )
+        resp.raise_for_status()
 
     def _upload_sample(self, step: int, key: str, sample: Sample):
         files = {}
@@ -178,13 +191,14 @@ class Run:
             files["image"] = ("image.png", sample.image.to_bytes(), "image/png")
 
         try:
-            self._session.post(
+            resp = self._session.post(
                 f"{self.base_url}/api/runs/{self.run_id}/samples",
                 data=data,
                 files=files if files else None,
             )
-        except Exception:
-            pass
+            resp.raise_for_status()
+        except Exception as exc:
+            self._warn(f"sample upload failed for {key} step {step}: {exc}")
 
     def _spool(self, points: list[dict]):
         SPOOL_DIR.mkdir(parents=True, exist_ok=True)
@@ -192,3 +206,30 @@ class Run:
         with open(path, "a") as f:
             for p in points:
                 f.write(json.dumps(p) + "\n")
+
+    def _drain_spool_once(self):
+        if not self.run_id or not SPOOL_DIR.exists():
+            return
+        paths = sorted(SPOOL_DIR.glob(f"{self.run_id}_*.jsonl"))
+        if not paths:
+            return
+
+        path = paths[0]
+        try:
+            points = [
+                json.loads(line)
+                for line in path.read_text().splitlines()
+                if line.strip()
+            ]
+            if points:
+                self._send_points(points)
+            path.unlink()
+        except Exception as exc:
+            self._warn(f"spool replay failed for {path.name}: {exc}")
+
+    def _warn(self, message: str):
+        now = time.time()
+        if now - self._last_warning_at < 30:
+            return
+        self._last_warning_at = now
+        print(f"[quokka] {message}", file=sys.stderr)
