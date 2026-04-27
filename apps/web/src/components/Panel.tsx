@@ -162,7 +162,8 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
       cursor: {
         x: true,
         y: false,
-        drag: { x: true, y: false },
+        // Drag captures both axes; we decide what to zoom in `setSelect`.
+        drag: { x: true, y: true, setScale: false, uni: 10 },
         sync: { key: SYNC_KEY },
         points: { size: 5 },
       },
@@ -254,6 +255,30 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
             if (y1 < 8) y1 = 8;
             tip.style.left = x1 + 'px';
             tip.style.top = y1 + 'px';
+          },
+        ],
+        // Drag-to-zoom (W&B-style). Auto-detect: a near-horizontal drag
+        // zooms x only; a clearly 2D rectangle zooms both axes.
+        setSelect: [
+          (u) => {
+            const sel = u.select;
+            if (!sel || sel.width < 5) return;
+            const xMin = u.posToVal(sel.left, 'x');
+            const xMax = u.posToVal(sel.left + sel.width, 'x');
+
+            const horizontalOnly = sel.height < 20 || sel.width > sel.height * 4;
+
+            u.batch(() => {
+              u.setScale('x', { min: xMin, max: xMax });
+              if (!horizontalOnly) {
+                // Pixel y grows downward, scale y grows upward.
+                const yMax = u.posToVal(sel.top, 'y');
+                const yMin = u.posToVal(sel.top + sel.height, 'y');
+                u.setScale('y', { min: yMin, max: yMax });
+              }
+            });
+            // Clear the highlight rect now that the zoom has been applied.
+            u.setSelect({ left: 0, top: 0, width: 0, height: 0 }, false);
           },
         ],
       },

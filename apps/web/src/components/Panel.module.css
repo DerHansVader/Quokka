@@ -11,6 +11,13 @@
 .host :global(.u-wrap) {
   width: 100% !important;
 }
+/* W&B-style drag-to-zoom rectangle. uPlot draws this while the user
+ * drags; we just need it to be visible. */
+.host :global(.u-select) {
+  background: rgba(0, 122, 255, 0.14);
+  border: 1px solid rgba(0, 122, 255, 0.55);
+  border-radius: 2px;
+}
 .tip {
   position: fixed;
   z-index: 1000;
