@@ -56,6 +56,27 @@ Caddy provisions TLS automatically. The first signup becomes the owner of the de
 
 Quokka stores metrics in a hand-written TimescaleDB hypertable. Do **not** run `prisma db push` against a Quokka database; it can drop the unmanaged `metric` table. Use `pnpm --filter @quokka/api db:migrate` / `prisma migrate deploy` only.
 
+## Upgrade
+
+From the repo root, with the stack already running:
+
+```bash
+git fetch origin
+./deploy/upgrade/upgrade.sh
+```
+
+The script runs five steps in order and aborts loudly on any failure:
+
+1. **preflight** — checks docker, git, and `deploy/.env`.
+2. **backup** — `pg_dump` into `./backups/upgrade_<timestamp>.sql.gz` on the host.
+3. **pull** — `git pull --ff-only` on the current branch (local edits are auto-stashed, never discarded).
+4. **rebuild** — rebuilds the api and web images and rolls them with `--no-deps`, so postgres, its volume, and its connections are untouched. The api container's entrypoint runs `prisma migrate deploy` on boot, so new migrations apply automatically.
+5. **verify** — waits for `/api/health` and confirms the `metric` hypertable still exists. If it doesn't, restore from the backup written in step 2.
+
+Useful flags: `DRY_RUN=1` (print every command instead of running it), `SKIP_PULL=1` (use already-checked-out code), `BACKUP_DIR=/path` (override backup destination), `WAIT_SECONDS=120` (longer health-check window).
+
+The upgrade scripts are covered by an offline test suite — run `pnpm test:upgrade` to exercise the orchestrator end-to-end with mocked docker/git, no real deployment required. See [deploy/upgrade/README.md](./deploy/upgrade/README.md) for details.
+
 ## Local development
 
 Requires **Node 20+**, **pnpm**, **Docker**, and **Python 3.10+** (only for the SDK).
