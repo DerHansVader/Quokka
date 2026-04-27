@@ -1,17 +1,38 @@
-.joinCard {
+.headRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.headActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.actionPanel {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+  animation: slideIn 220ms var(--ease) both;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.form {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  margin-bottom: 28px;
-  padding: 16px;
-  background: var(--surface-1);
-  border-radius: var(--r-lg);
 }
-.joinField { width: min(360px, 100%); }
-.joinMessage {
-  padding-bottom: 12px;
-  font-size: 13px;
-  color: var(--text-secondary);
+.formField { flex: 1; min-width: 0; max-width: 420px; }
+.formActions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 2px;
 }
 
 .list {
@@ -81,4 +102,51 @@
 @keyframes shimmer {
   0%, 100% { opacity: 0.5; }
   50%      { opacity: 1; }
+}
+
+/* Empty state — only shown when the user has no teams. */
+.empty {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 24px;
+  margin-top: 16px;
+}
+.emptyCard {
+  padding: 28px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.emptyTitle {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.emptySub {
+  margin-top: -10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.emptyDivider {
+  align-self: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@media (max-width: 720px) {
+  .headRow { flex-direction: column; align-items: flex-start; }
+  .form { flex-direction: column; align-items: stretch; }
+  .formField { max-width: none; }
+  .empty {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .emptyDivider { padding: 4px 0; }
 }
