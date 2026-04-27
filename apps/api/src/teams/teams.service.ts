@@ -43,7 +43,7 @@ export class TeamsService {
 
   async inviteMember(teamId: string, userId: string, dto: InviteMemberDto) {
     await this.requireRole(teamId, userId, ['owner', 'admin']);
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = `qki_${crypto.randomBytes(18).toString('base64url')}`;
     return this.prisma.invite.create({
       data: {
         teamId,
@@ -53,6 +53,30 @@ export class TeamsService {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+  }
+
+  async joinByInviteKey(userId: string, inviteKey: string) {
+    const token = inviteKey.trim();
+    if (!token) throw new BadRequestException('Invite key required');
+
+    const invite = await this.prisma.invite.findUnique({ where: { token } });
+    if (!invite || invite.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired invite key');
+    }
+
+    const existing = await this.prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId: invite.teamId, userId } },
+    });
+    if (existing) {
+      await this.prisma.invite.delete({ where: { id: invite.id } });
+      return existing;
+    }
+
+    const membership = await this.prisma.teamMember.create({
+      data: { teamId: invite.teamId, userId, role: invite.role },
+    });
+    await this.prisma.invite.delete({ where: { id: invite.id } });
+    return membership;
   }
 
   async listInvites(teamId: string, userId: string) {

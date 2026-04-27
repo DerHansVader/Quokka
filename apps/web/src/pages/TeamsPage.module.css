@@ -1,3 +1,19 @@
+.joinCard {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 16px;
+  background: var(--surface-1);
+  border-radius: var(--r-lg);
+}
+.joinField { width: min(360px, 100%); }
+.joinMessage {
+  padding-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .list {
   display: flex;
   flex-direction: column;

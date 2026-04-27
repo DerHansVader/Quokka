@@ -14,6 +14,10 @@ export class SignupDto {
   @IsOptional()
   @IsString()
   inviteToken?: string;
+
+  @IsOptional()
+  @IsString()
+  inviteKey?: string;
 }
 
 export class LoginDto {
@@ -27,4 +31,13 @@ export class LoginDto {
 export class CreateApiKeyDto {
   @IsString()
   label: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword: string;
 }

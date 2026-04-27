@@ -108,7 +108,7 @@ export function DocsPage() {
           </p>
           <div className={s.heroActions}>
             <a href="#quickstart" className={s.heroBtn}>Get started</a>
-            <a href="https://github.com/quokka-ml/quokka" className={s.heroLink} target="_blank"
+            <a href="https://github.com/DerHansVader/Quokka" className={s.heroLink} target="_blank"
               rel="noreferrer">
               View on GitHub
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
@@ -285,8 +285,9 @@ quokka.log({
               <li><strong>Member</strong> — read/write access to projects and runs.</li>
             </ul>
             <p>
-              Invites today are link-based: create one in the UI, copy the link, share it
-              wherever. Links expire after 7 days and can be revoked.
+              Invites are key-based: create one in the UI, copy the key, and share it
+              wherever. New users paste it during signup; existing users paste it from
+              the Teams page. Keys expire after 7 days and can be revoked.
             </p>
           </Section>
 

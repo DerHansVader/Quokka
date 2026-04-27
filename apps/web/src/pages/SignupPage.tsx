@@ -11,12 +11,14 @@ export function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteKey, setInviteKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { setToken } = useAuthStore();
   const nav = useNavigate();
   const [params] = useSearchParams();
   const inviteToken = params.get('invite') || undefined;
+  const resolvedInviteKey = inviteKey.trim() || inviteToken;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export function SignupPage() {
     setLoading(true);
     try {
       const { token } = await api.post<{ token: string }>('/auth/signup',
-        { name, email, password, inviteToken });
+        { name, email, password, inviteKey: resolvedInviteKey });
       setToken(token);
       nav('/');
     } catch (err: any) {
@@ -38,7 +40,7 @@ export function SignupPage() {
   return (
     <AuthShell
       title="Create account"
-      subtitle={inviteToken ? 'Joining via team invite' : 'Get started with Quokka'}
+      subtitle={resolvedInviteKey ? 'Joining via team invite' : 'Get started with Quokka'}
       error={error}
     >
       <form onSubmit={submit} className={a.form}>
@@ -51,6 +53,9 @@ export function SignupPage() {
         <Input label="Password" type="password" placeholder="At least 8 characters"
           value={password} onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password" required />
+        <Input label="Invite key" placeholder="qki_..."
+          value={inviteKey} onChange={(e) => setInviteKey(e.target.value)}
+          autoComplete="off" />
         <div className={a.submitRow}>
           <Button type="submit" size="lg" loading={loading} className={a.submit}>
             Create account

@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { SignupDto, LoginDto, CreateApiKeyDto } from './auth.dto';
+import { SignupDto, LoginDto, CreateApiKeyDto, ChangePasswordDto } from './auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -23,13 +23,15 @@ export class AuthService {
 
     const isFirstUser = (await this.prisma.user.count()) === 0;
 
-    if (!isFirstUser && !dto.inviteToken) {
-      throw new BadRequestException('Invite token required');
+    const inviteKey = dto.inviteKey || dto.inviteToken;
+
+    if (!isFirstUser && !inviteKey) {
+      throw new BadRequestException('Invite key required');
     }
 
     let invite: any = null;
-    if (dto.inviteToken) {
-      invite = await this.prisma.invite.findUnique({ where: { token: dto.inviteToken } });
+    if (inviteKey) {
+      invite = await this.prisma.invite.findUnique({ where: { token: inviteKey.trim() } });
       if (!invite || invite.expiresAt < new Date()) {
         throw new BadRequestException('Invalid or expired invite');
       }
@@ -63,6 +65,19 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     return this.issueToken(user.id);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+    return { ok: true };
   }
 
   async validateApiKey(token: string) {

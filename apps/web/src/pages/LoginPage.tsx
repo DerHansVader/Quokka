@@ -10,6 +10,7 @@ import a from './Auth.module.css';
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteKey, setInviteKey] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { setToken } = useAuthStore();
@@ -22,6 +23,14 @@ export function LoginPage() {
     try {
       const { token } = await api.post<{ token: string }>('/auth/login', { email, password });
       setToken(token);
+      if (inviteKey.trim()) {
+        try {
+          await api.post('/teams/join', { inviteKey: inviteKey.trim() });
+        } catch (joinErr: any) {
+          setToken(null);
+          throw new Error(joinErr.message || 'Signed in, but could not join team.');
+        }
+      }
       nav('/');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
@@ -39,6 +48,9 @@ export function LoginPage() {
         <Input label="Password" type="password" placeholder="••••••••"
           value={password} onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password" required />
+        <Input label="Invite key" placeholder="Optional, qki_..."
+          value={inviteKey} onChange={(e) => setInviteKey(e.target.value)}
+          autoComplete="off" />
         <div className={a.submitRow}>
           <Button type="submit" size="lg" loading={loading} className={a.submit}>
             Sign in

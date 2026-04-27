@@ -21,6 +21,11 @@ export class InviteMemberDto {
   role?: TeamRole;
 }
 
+export class JoinTeamDto {
+  @IsString()
+  inviteKey: string;
+}
+
 export class UpdateRoleDto {
   @IsString()
   @IsIn(TEAM_ROLES as unknown as string[])

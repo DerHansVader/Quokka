@@ -1,6 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
 import { Page } from '../components/Page';
 import s from './TeamsPage.module.css';
 import p from './shared.module.css';
@@ -13,9 +16,21 @@ interface Team {
 }
 
 export function TeamsPage() {
+  const qc = useQueryClient();
+  const [inviteKey, setInviteKey] = useState('');
+  const [message, setMessage] = useState('');
   const { data: teams, isLoading } = useQuery({
     queryKey: ['teams'],
     queryFn: () => api.get<Team[]>('/teams'),
+  });
+  const joinMut = useMutation({
+    mutationFn: () => api.post('/teams/join', { inviteKey }),
+    onSuccess: () => {
+      setInviteKey('');
+      setMessage('Joined team.');
+      qc.invalidateQueries({ queryKey: ['teams'] });
+    },
+    onError: (err: any) => setMessage(err.message || 'Could not join team.'),
   });
 
   return (
@@ -24,6 +39,28 @@ export function TeamsPage() {
         <h1 className={p.h1}>Teams</h1>
         <p className={p.subtitle}>Select a team to view its projects</p>
       </div>
+
+      <form
+        className={s.joinCard}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setMessage('');
+          if (inviteKey.trim()) joinMut.mutate();
+        }}
+      >
+        <div className={s.joinField}>
+          <Input
+            label="Invite key"
+            placeholder="qki_..."
+            value={inviteKey}
+            onChange={(e) => setInviteKey(e.target.value)}
+          />
+        </div>
+        <Button type="submit" loading={joinMut.isPending} disabled={!inviteKey.trim()}>
+          Join team
+        </Button>
+        {message && <p className={s.joinMessage}>{message}</p>}
+      </form>
 
       {isLoading ? (
         <div className={s.list}>

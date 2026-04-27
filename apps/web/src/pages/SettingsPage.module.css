@@ -27,6 +27,11 @@
   animation: slideDown 240ms var(--ease) both;
 }
 .createField { flex: 1; max-width: 320px; }
+.formMessage {
+  margin: -8px 0 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-6px); }

@@ -25,6 +25,9 @@ export function SettingsPage() {
   const qc = useQueryClient();
   const [label, setLabel] = useState('');
   const [newToken, setNewToken] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState('');
 
   const { data: apiKeys, isLoading } = useQuery({
     queryKey: ['api-keys'],
@@ -45,6 +48,16 @@ export function SettingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['api-keys'] }),
   });
 
+  const passwordMut = useMutation({
+    mutationFn: () => api.post('/auth/password', { currentPassword, newPassword }),
+    onSuccess: () => {
+      setCurrentPassword('');
+      setNewPassword('');
+      setPasswordMessage('Password updated.');
+    },
+    onError: (err: any) => setPasswordMessage(err.message || 'Could not update password.'),
+  });
+
   return (
     <Page>
       <div className={s.col}>
@@ -52,6 +65,54 @@ export function SettingsPage() {
           <h1 className={p.h1}>Settings</h1>
           <p className={p.subtitle}>Manage your account and API keys</p>
         </div>
+
+        <section className={s.section}>
+          <div className={s.sectionHead}>
+            <div>
+              <h2 className={s.sectionTitle}>Password</h2>
+              <p className={s.sectionHint}>Change the password for your account</p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPasswordMessage('');
+              passwordMut.mutate();
+            }}
+            className={s.createForm}
+          >
+            <div className={s.createField}>
+              <Input
+                label="Current password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div className={s.createField}>
+              <Input
+                label="New password"
+                type="password"
+                placeholder="At least 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              loading={passwordMut.isPending}
+              disabled={currentPassword.length === 0 || newPassword.length < 8}
+            >
+              Update password
+            </Button>
+          </form>
+          {passwordMessage && <p className={s.formMessage}>{passwordMessage}</p>}
+        </section>
 
         <section className={s.section}>
           <div className={s.sectionHead}>

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { SignupDto, LoginDto, CreateApiKeyDto } from './auth.dto';
+import { SignupDto, LoginDto, CreateApiKeyDto, ChangePasswordDto } from './auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -31,6 +31,12 @@ export class AuthController {
   me(@Request() req: any) {
     const { passwordHash, ...user } = req.user;
     return user;
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('password')
+  changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto);
   }
 
   @UseGuards(AuthGuard('jwt'))

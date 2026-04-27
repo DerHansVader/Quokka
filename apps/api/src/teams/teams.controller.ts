@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { TeamsService } from './teams.service';
-import { CreateTeamDto, InviteMemberDto, UpdateRoleDto } from './teams.dto';
+import { CreateTeamDto, InviteMemberDto, JoinTeamDto, UpdateRoleDto } from './teams.dto';
 import { CurrentUser } from '../common/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -31,6 +31,11 @@ export class TeamsController {
   @Post()
   create(@CurrentUser() user: any, @Body() dto: CreateTeamDto) {
     return this.teamsService.create(user.id, dto);
+  }
+
+  @Post('join')
+  join(@CurrentUser() user: any, @Body() dto: JoinTeamDto) {
+    return this.teamsService.joinByInviteKey(user.id, dto.inviteKey);
   }
 
   @Get(':slug')

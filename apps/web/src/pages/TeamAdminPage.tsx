@@ -128,9 +128,6 @@ export function TeamAdminPage() {
     );
   }
 
-  const inviteLink = (token: string) =>
-    window.location.origin + '/signup?invite=' + token;
-
   const copy = (text: string) => navigator.clipboard?.writeText(text);
 
   const submitInvite = (e: React.FormEvent) => {
@@ -194,14 +191,14 @@ export function TeamAdminPage() {
             </select>
           </div>
           <Button type="submit" loading={inviteMut.isPending} disabled={!email.trim()}>
-            Send invite
+            Create invite key
           </Button>
         </form>
 
         {justCreated && (
           <div className={s.inviteCreated}>
             <div className={s.inviteCreatedHead}>
-              <span className={s.inviteCreatedKicker}>Invite link</span>
+              <span className={s.inviteCreatedKicker}>Invite key</span>
               <button
                 className={s.linkBtn}
                 onClick={() => setJustCreated(null)}
@@ -212,17 +209,17 @@ export function TeamAdminPage() {
               </button>
             </div>
             <div className={s.inviteLinkRow}>
-              <code className={s.inviteLink}>{inviteLink(justCreated.token)}</code>
+              <code className={s.inviteLink}>{justCreated.token}</code>
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => copy(inviteLink(justCreated.token))}
+                onClick={() => copy(justCreated.token)}
               >
                 Copy
               </Button>
             </div>
             <p className={s.inviteHint}>
-              Share this link with {justCreated.email}. Expires in 7 days.
+              Share this key with {justCreated.email}. They can paste it on signup or from the Teams page. Expires in 7 days.
             </p>
           </div>
         )}
@@ -247,15 +244,15 @@ export function TeamAdminPage() {
                 <div className={s.info}>
                   <div className={s.name}>{inv.email}</div>
                   <div className={s.meta}>
-                    Pending · Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                    Key {inv.token} · Expires {new Date(inv.expiresAt).toLocaleDateString()}
                   </div>
                 </div>
                 <span className={s.roleTag}>{ROLE_LABEL[inv.role]}</span>
                 <button
                   className={s.iconBtn}
-                  onClick={() => copy(inviteLink(inv.token))}
-                  title="Copy invite link"
-                  aria-label="Copy invite link"
+                  onClick={() => copy(inv.token)}
+                  title="Copy invite key"
+                  aria-label="Copy invite key"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
