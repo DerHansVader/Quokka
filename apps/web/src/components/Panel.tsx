@@ -297,6 +297,9 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
   }, [runs, config.smoothing.type, config.showRaw]);
 
   // Cross-plot hover highlight: thicken the hovered run, dim the rest.
+  // NOTE: uPlot wraps `series.stroke` as a function on init and calls it on
+  // every paint (cacheStrokeFill). We MUST keep it callable — replacing it
+  // with a plain string crashes the draw loop and blanks out all lines.
   useEffect(() => {
     const u = plotRef.current;
     if (!u) return;
@@ -305,18 +308,22 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
 
     runs.forEach((r, i) => {
       const mainIdx = 1 + offset + i;
-      const series = u.series[mainIdx];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const series = u.series[mainIdx] as any;
       if (!series) return;
       if (hoveredRunId == null) {
-        series.stroke = r.color;
+        series.stroke = () => r.color;
         series.width = STROKE_NORMAL;
       } else if (r.runId === hoveredRunId) {
-        series.stroke = r.color;
+        series.stroke = () => r.color;
         series.width = STROKE_HIGHLIGHT;
       } else {
-        series.stroke = withAlpha(r.color, STROKE_DIM_ALPHA);
+        const dim = withAlpha(r.color, STROKE_DIM_ALPHA);
+        series.stroke = () => dim;
         series.width = STROKE_NORMAL;
       }
+      // Force the path to be rebuilt so the new width is baked in.
+      series._paths = null;
     });
     u.redraw(false);
   }, [hoveredRunId, runs, config.smoothing.type, config.showRaw]);
