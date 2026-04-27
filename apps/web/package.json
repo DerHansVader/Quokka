@@ -15,6 +15,7 @@
   "dependencies": {
     "@quokka/shared": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
+    "emoji-picker-react": "^4.19.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.0",

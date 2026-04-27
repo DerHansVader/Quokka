@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Page } from '../components/Page';
+import { EmojiPicker } from '../components/EmojiPicker';
 import s from './TeamAdminPage.module.css';
 import p from './shared.module.css';
 
@@ -244,14 +245,11 @@ export function TeamAdminPage() {
         <form onSubmit={submitTeamUpdate} className={s.detailsForm}>
           <div className={s.iconField}>
             <label className={s.fieldLabel}>Icon</label>
-            <input
-              className={s.iconInput}
+            <EmojiPicker
               value={tIcon}
-              onChange={(e) => setTIcon(e.target.value.slice(0, 4))}
-              placeholder="🐨"
-              maxLength={4}
-              aria-label="Team icon"
+              onChange={setTIcon}
               disabled={!canEditTeam}
+              ariaLabel="Team icon"
             />
           </div>
           <div className={s.detailsField}>
