@@ -269,19 +269,27 @@ export function Panel({ config, runs, height = DEFAULT_HEIGHT, fill = false }: P
             tip.style.display = 'block';
 
             // Position the tooltip in *viewport* coordinates so it can extend
-            // outside of the panel without ever getting clipped.
-            const root = u.root.getBoundingClientRect();
-            const left = u.cursor.left ?? 0;
-            const top = cy;
+            // outside of the panel without ever getting clipped. We use
+            // `over.getBoundingClientRect()` (the canvas surface, which the
+            // cursor coords are relative to) and scale the now-corrected
+            // unscaled cursor coords back up by the live CSS transform —
+            // otherwise in Canvas mode the tooltip drifts by a factor of
+            // the zoom level.
+            const overEl = u.over as HTMLElement;
+            const overRect = overEl.getBoundingClientRect();
+            const sx = overEl.clientWidth ? overRect.width / overEl.clientWidth : 1;
+            const sy = overEl.clientHeight ? overRect.height / overEl.clientHeight : 1;
+            const left = (u.cursor.left ?? 0) * sx;
+            const top = cy * sy;
             const off = 12;
             const tipW = tip.offsetWidth;
             const tipH = tip.offsetHeight;
             const vw = window.innerWidth;
             const vh = window.innerHeight;
-            let x1 = root.left + left + off;
-            if (x1 + tipW > vw - 8) x1 = root.left + left - tipW - off;
+            let x1 = overRect.left + left + off;
+            if (x1 + tipW > vw - 8) x1 = overRect.left + left - tipW - off;
             if (x1 < 8) x1 = 8;
-            let y1 = root.top + top + off;
+            let y1 = overRect.top + top + off;
             if (y1 + tipH > vh - 8) y1 = vh - tipH - 8;
             if (y1 < 8) y1 = 8;
             tip.style.left = x1 + 'px';
