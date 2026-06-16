@@ -1,20 +1,31 @@
 import { create } from 'zustand';
+import {
+  clearStoredToken,
+  readStoredToken,
+  redirectToLoginIfNeeded,
+} from '../lib/authSession';
 
 interface AuthState {
   token: string | null;
   setToken: (token: string | null) => void;
   logout: () => void;
+  sessionExpired: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: localStorage.getItem('qk_token'),
+  token: readStoredToken(),
   setToken: (token) => {
     if (token) localStorage.setItem('qk_token', token);
-    else localStorage.removeItem('qk_token');
+    else clearStoredToken();
     set({ token });
   },
   logout: () => {
-    localStorage.removeItem('qk_token');
+    clearStoredToken();
     set({ token: null });
+  },
+  sessionExpired: () => {
+    clearStoredToken();
+    set({ token: null });
+    redirectToLoginIfNeeded();
   },
 }));

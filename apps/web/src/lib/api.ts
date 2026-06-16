@@ -1,4 +1,16 @@
+import { useAuthStore } from '../stores/auth';
+
 const BASE = '/api';
+
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = localStorage.getItem('qk_token');
@@ -12,9 +24,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || res.statusText);
+    const message = body.message || res.statusText;
+    const isPublicAuth = path === '/auth/login' || path === '/auth/signup';
+    if (res.status === 401 && token && !isPublicAuth) {
+      useAuthStore.getState().sessionExpired();
+    }
+    throw new ApiError(message, res.status);
   }
-  // 204 / empty body responses
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
 }

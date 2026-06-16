@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
+import { saveEmail } from '../lib/authSession';
 import { api } from '../lib/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -28,6 +29,7 @@ export function SignupPage() {
     try {
       const { token } = await api.post<{ token: string }>('/auth/signup',
         { name, email, password, inviteKey: resolvedInviteKey });
+      saveEmail(email);
       setToken(token);
       nav('/');
     } catch (err: any) {

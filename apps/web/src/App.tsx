@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { Layout } from './components/Layout';
+import { AuthSessionWatcher } from './components/AuthSessionWatcher';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { TeamsPage } from './pages/TeamsPage';
@@ -22,6 +23,7 @@ function Protected({ children }: { children: React.ReactNode }) {
 export function App() {
   return (
     <Layout>
+      <AuthSessionWatcher />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
