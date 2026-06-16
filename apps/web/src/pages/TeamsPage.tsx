@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Page } from '../components/Page';
+import { isNewUser, QuokkaSetupPrompt } from '../components/QuokkaSetupPrompt';
 import s from './TeamsPage.module.css';
 import p from './shared.module.css';
 
@@ -14,6 +15,10 @@ interface Team {
   name: string;
   icon: string | null;
   _count: { projects: number; members: number };
+}
+
+interface Me {
+  createdAt: string;
 }
 
 type Action = 'create' | 'join' | null;
@@ -34,8 +39,13 @@ export function TeamsPage() {
     queryKey: ['teams'],
     queryFn: () => api.get<Team[]>('/teams'),
   });
+  const { data: me } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<Me>('/auth/me'),
+  });
 
   const hasTeams = !!teams?.length;
+  const showNewUserPrompt = hasTeams && isNewUser(me?.createdAt);
 
   return (
     <Page>
@@ -87,6 +97,10 @@ export function TeamsPage() {
           </div>
         )}
       </div>
+
+      {showNewUserPrompt && (
+        <QuokkaSetupPrompt dismissible />
+      )}
 
       {isLoading ? (
         <div className={s.list}>
@@ -219,18 +233,21 @@ function EmptyState({
   onCreated, onJoined,
 }: { onCreated: (slug: string) => void; onJoined: () => void }) {
   return (
-    <div className={s.empty}>
-      <div className={s.emptyCard}>
-        <h2 className={s.emptyTitle}>Create your first team</h2>
-        <p className={s.emptySub}>Teams hold projects, runs, and members.</p>
-        <CreateTeamForm onCreated={onCreated} autoFocus={false} />
+    <>
+      <QuokkaSetupPrompt intro="Copy this prompt to have your coding agent send training metrics here as soon as your first project logs data." />
+      <div className={s.empty}>
+        <div className={s.emptyCard}>
+          <h2 className={s.emptyTitle}>Create your first team</h2>
+          <p className={s.emptySub}>Teams hold projects, runs, and members.</p>
+          <CreateTeamForm onCreated={onCreated} autoFocus={false} />
+        </div>
+        <div className={s.emptyDivider}>or</div>
+        <div className={s.emptyCard}>
+          <h2 className={s.emptyTitle}>Join with an invite key</h2>
+          <p className={s.emptySub}>Paste a key from a teammate to join their team.</p>
+          <JoinTeamForm onJoined={onJoined} autoFocus={false} />
+        </div>
       </div>
-      <div className={s.emptyDivider}>or</div>
-      <div className={s.emptyCard}>
-        <h2 className={s.emptyTitle}>Join with an invite key</h2>
-        <p className={s.emptySub}>Paste a key from a teammate to join their team.</p>
-        <JoinTeamForm onJoined={onJoined} autoFocus={false} />
-      </div>
-    </div>
+    </>
   );
 }

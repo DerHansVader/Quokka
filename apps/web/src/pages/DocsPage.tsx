@@ -2,11 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import { QuokkaMark } from '../components/QuokkaMark';
+import { QuokkaSetupPrompt } from '../components/QuokkaSetupPrompt';
 import s from './DocsPage.module.css';
 
 interface SectionDef { id: string; title: string; }
 
 const SECTIONS: SectionDef[] = [
+  { id: 'ai-setup',     title: 'AI setup prompt' },
   { id: 'quickstart',   title: 'Quick start' },
   { id: 'install',      title: 'Install the SDK' },
   { id: 'api-key',      title: 'Get an API key' },
@@ -145,6 +147,10 @@ export function DocsPage() {
         </aside>
 
         <main className={s.content}>
+          <Section id="ai-setup" title="AI setup prompt">
+            <QuokkaSetupPrompt />
+          </Section>
+
           <Section id="quickstart" title="Quick start">
             <p>Four lines and you're logging:</p>
             <CodeBlock lang="python">{`import quokka

@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Page } from '../components/Page';
+import { isNewUser, QuokkaSetupPrompt } from '../components/QuokkaSetupPrompt';
 import s from './ProjectsPage.module.css';
 import p from './shared.module.css';
 
@@ -27,6 +28,7 @@ interface TeamMeta {
 
 interface Me {
   id: string;
+  createdAt: string;
   isSuperAdmin?: boolean;
 }
 
@@ -99,6 +101,7 @@ export function ProjectsPage() {
   }, [projects]);
 
   const teamMembers = team?.members || [];
+  const showNewUserPrompt = !!projects?.length && isNewUser(me?.createdAt);
 
   return (
     <Page>
@@ -126,6 +129,10 @@ export function ProjectsPage() {
           </div>
         </div>
       </div>
+
+      {showNewUserPrompt && (
+        <QuokkaSetupPrompt dismissible />
+      )}
 
       {showCreate && (
         <form
@@ -198,6 +205,9 @@ export function ProjectsPage() {
         </div>
       ) : !projects?.length ? (
         <div className={p.empty}>
+          <div className={s.emptySetup}>
+            <QuokkaSetupPrompt intro="Copy this prompt to have your coding agent create the first project automatically when it logs a run." />
+          </div>
           <div className={p.emptyIcon}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
